@@ -1,78 +1,84 @@
 import os
 import numpy as np
 from aspire.utils.parse_star import read_star
-from pyfftw.interfaces.numpy_fft import rfft2, irfft2
+from pyfftw.interfaces.numpy_fft import fft2, ifft2, rfft2, irfft2
 from scipy.io import loadmat
 import mrcfile
 from box import Box
+from aspire.utils.common import create_struct
+import time
+# from dev_utils import *
 
 
-def phaseflip_star_file(star_file, pixel_size=None):
+def phaseflip_star_file(star_file, pixel_size=None, threads=1):
     """
         todo add verbosity
     """
     # star is a list of star lines describing projections
     star_records = read_star(star_file)['__root__']
+    dir_path = os.path.dirname(star_file)
+    stack_info = organize_star_records(star_records)
 
+    # Initializing projections
+    stack_name = star_records[0].rlnImageName.split('@')[1]
+    mrc_path = os.path.join(os.path.dirname(star_file), stack_name)
+    stack = load_stack_from_file(mrc_path)
+    resolution = stack.shape[1]
     num_projections = len(star_records)
-    projections = np.zeros((1, 1, 1))
-    projs_init = False  # has the stack been initialized already
+    rfft_resolution = resolution // 2 + 1
+    # imhat_stack = np.zeros((num_projections, resolution, rfft_resolution), dtype='complex64')
+    projections = np.zeros((num_projections, resolution, resolution), dtype='float32')
 
-    last_processed_stack = None
-    stack = np.zeros((1, 1))
-    idx = 0
-    while True:
+    # Initializing pixel_size
+    if pixel_size is None:
+        tmp = Box(cryo_parse_Relion_CTF_struct(star_records[0]))
+        if tmp.tmppixA != -1:
+            pixel_size = tmp.tmppixA
+        else:
+            raise ValueError("Pixel size not provided and does not appear in STAR file")
 
-        if idx == num_projections:
-            break
-        # Get the identification string of the next image to process.
-        # This is composed from the index of the image within an image stack,
-        #  followed by '@' and followed by the filename of the MRC stack.
-        image_id = star_records[idx].rlnImageName
-        image_parts = image_id.split('@')
-        stack_name = image_parts[1]
+    # Initializing parameter for cryo_CTF_Relion_fast
+    a, b, c = precompute_cryo_CTF_Relion_fast(resolution)
 
-        # Read the image stack from the disk, if different from the current one.
-        # TODO can we revert this condition to positive? what they're equal?
-        if stack_name != last_processed_stack:
-            mrc_path = os.path.join(os.path.dirname(star_file), stack_name)
-            stack = load_stack_from_file(mrc_path)
-            last_processed_stack = stack_name
+    num_finished = 0
+    for stack_name in stack_info:
+        mrc_path = os.path.join(dir_path, stack_name)
+        stack = load_stack_from_file(mrc_path)
+        pos_in_stack = stack_info[stack_name].pos_in_stack
+        pos_in_records = stack_info[stack_name].pos_in_records
+        tic = time.time()
+        for i, j in zip(pos_in_stack, pos_in_records):
+            curr_image = stack[i]
+            curr_records = Box(cryo_parse_Relion_CTF_struct(star_records[j]))
+            curr_records.pixel_size = pixel_size
 
-        side = stack.shape[1]
+            # reference code
+            h = cryo_CTF_Relion(resolution, curr_records)
+            imhat = np.fft.fftshift(fft2(curr_image))
+            imhat *= np.sign(h)
+            pfim = ifft2(np.fft.ifftshift(imhat))
 
-        if not projs_init:  # TODO why not initialize before loop (maybe b/c of huge stacks?)
-            # projections was "PFprojs" originally
-            projections = np.zeros((num_projections, side, side), dtype='float32')
-            projs_init = True
-
-        star_record_data = Box(cryo_parse_Relion_CTF_struct(star_records[idx]))
-
-        if pixel_size is None:
-            if star_record_data.tmppixA != -1:
-                pixel_size = star_record_data.tmppixA
-
-            else:
-                raise ValueError("Pixel size not provided and does not appear in STAR file")
-
-        h = cryo_CTF_Relion(side, star_record_data)
-
-        # reference code
-        # imhat = np.fft.fftshift(fft2(stack))
-        # imhat *= np.sign(h)
-        # pfim = ifft2(np.fft.ifftshift(imhat))
-
-        # Instead of shifting and shifting back im, shift h. Also using real fft instead.
-        h = np.fft.fftshift(h)
-        imhat = rfft2(stack)
-        imhat *= np.sign(h[:, :imhat.shape[2]])
-        pfim = irfft2(imhat)
-
-        curr_num_images = pfim.shape[0]
-        projections[idx:idx + curr_num_images] = pfim.astype('float32')
-        idx += curr_num_images
-        print('{}/{}'.format(idx, num_projections))
-
+            # Instead of shifting and shifting back im, shift h. Also using real fft instead.
+            # h = cryo_CTF_Relion(resolution, curr_records)
+            # h = np.fft.fftshift(h)
+            # h = h[:, :resolution // 2 + 1]
+            # h = cryo_CTF_Relion_fast(a, b, c, curr_records)  # Faster way to obtain h.
+            # imhat2 = rfft2(curr_image)
+            # np.multiply(imhat, np.sign(h), out=imhat_stack[j])  # can irfft2 back the whole stack
+            # imhat2 *= np.sign(h)
+            # pfim2 = irfft2(imhat2)
+            # print(comp(pfim.real, pfim2.real))
+            projections[j] = pfim.astype('float32')
+            num_finished += 1
+        toc = time.time()
+        print('Finished {} images in {} seconds. In total finished {}/{}'.format(
+            len(pos_in_stack), toc - tic, num_finished, len(star_records)))
+    # tic = time.time()
+    # projections = irfft2(imhat_stack, threads=threads)
+    # toc = time.time()
+    # print('Finished irfft2 in {} seconds'.format(toc - tic))
+    # from aspire.utils.read_write import write_mrc
+    # write_mrc('/scratch/itaysason/phaseflipped.mrcs', projections.T)
     return projections
 
 
@@ -130,7 +136,7 @@ def cryo_CTF_Relion(square_side, star_record):
     # RadiusNorm returns radii such that when multiplied by the
     #  bandwidth of the signal, we get the correct radial frequnecies
     #  corresponding to each pixel in our nxn grid.
-    s = s * bw
+    s *= bw
 
     DFavg = (star_record.DefocusU + star_record.DefocusV) / 2
     DFdiff = (star_record.DefocusU - star_record.DefocusV)
@@ -140,8 +146,49 @@ def cryo_CTF_Relion(square_side, star_record):
     k4 = np.pi / 2*10**6 * star_record.spherical_aberration * wave_length**3
     chi = k4 * s**4 - k2 * s**2
 
-    return (np.sqrt(1 - star_record.amplitude_contrast ** 2) * np.sin(chi)
-            - star_record.amplitude_contrast * np.cos(chi))
+    return np.sqrt(1 - star_record.amplitude_contrast ** 2) * np.sin(chi) - star_record.amplitude_contrast * np.cos(chi)
+
+
+def cryo_CTF_Relion_fast(shifted_cut_s_squared, shifted_cut_s_fourth_power, shifted_cut_theta, star_record):
+    """
+    A faster version of cryo_CTF_Relion that assumes we already computed s and theta, shifted them and cut it to be of
+    size Nx(N // 2 + 1). s is also squared and raised to the fourth power to save some computations.
+    :param shifted_cut_s_squared:
+    :param shifted_cut_s_fourth_power:
+    :param shifted_cut_theta:
+    :param star_record:
+    :return:
+    """
+    wave_length = 1.22639 / np.sqrt(star_record.voltage * 1000 + 0.97845 * star_record.voltage**2)
+
+    # Divide by 10 to make pixel size in nm. BW is the bandwidth of
+    #  the signal corresponding to the given pixel size
+    bw = 1 / (star_record.pixel_size / 10)
+
+    # RadiusNorm returns radii such that when multiplied by the
+    #  bandwidth of the signal, we get the correct radial frequnecies
+    #  corresponding to each pixel in our nxn grid.
+
+    DFavg = (star_record.DefocusU + star_record.DefocusV) / 2
+    DFdiff = (star_record.DefocusU - star_record.DefocusV)
+    df = DFavg + DFdiff * np.cos(2 * (shifted_cut_theta - star_record.DefocusAngle)) / 2
+    k2 = np.pi * wave_length * df
+    # 10**6 converts spherical_aberration from mm to nm
+    k4 = np.pi / 2*10**6 * star_record.spherical_aberration * wave_length**3
+    chi = k4 * bw ** 4 * shifted_cut_s_fourth_power - k2 * bw ** 2 * shifted_cut_s_squared
+
+    return np.sqrt(1 - star_record.amplitude_contrast ** 2) * np.sin(chi) - star_record.amplitude_contrast * np.cos(chi)
+
+
+def precompute_cryo_CTF_Relion_fast(square_side):
+    s, theta = radius_norm(square_side, origin=fctr(square_side))
+    s, theta = np.fft.fftshift(s), np.fft.fftshift(theta)
+    rfft_side = square_side // 2 + 1
+    s, theta = s[:, :rfft_side], theta[:, :rfft_side]
+    a = s ** 2
+    b = s ** 4
+    c = theta.copy()
+    return a, b, c
 
 
 def radius_norm(n: int, origin=None):
@@ -241,3 +288,23 @@ def fctr(n):
         n = np.array([n, n])
 
     return np.ceil((n + 1) / 2)
+
+
+def organize_star_records(star_records):
+    stacks_info = {}
+    for i, rec in enumerate(star_records):
+        pos, path = rec.rlnImageName.split('@')
+        pos = int(pos) - 1
+        if path in stacks_info.keys():
+            stack_struct = stacks_info[path]
+            stack_struct.pos_in_stack.append(pos)
+            stack_struct.pos_in_records.append(i)
+        else:
+            stack_struct = create_struct({'pos_in_stack': [pos], 'pos_in_records': [i]})
+            stacks_info[path] = stack_struct
+
+    for path in stacks_info:
+        stack_struct = stacks_info[path]
+        stack_struct.pos_in_stack = np.array(stack_struct.pos_in_stack)
+        stack_struct.pos_in_records = np.array(stack_struct.pos_in_records)
+    return stacks_info
