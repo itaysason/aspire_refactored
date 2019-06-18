@@ -3,7 +3,7 @@ import numpy as np
 from pyfftw.interfaces.numpy_fft import fft2, ifft2
 
 
-def downsample(stack, n, mask=None):
+def downsample(stack, n, mask=None, stack_in_fourier=False):
     """ Use Fourier methods to change the sample interval and/or aspect ratio
         of any dimensions of the input image 'img'. If the optional argument
         stack is set to True, then the *first* dimension of 'img' is interpreted as the index of
@@ -25,6 +25,7 @@ def downsample(stack, n, mask=None):
     size_in = np.square(stack.shape[1])
     size_out = np.square(n)
     mask = 1 if mask is None else mask
-    fx = common.crop(np.fft.fftshift(fft2(stack), axes=(-2, -1)), (-1, n, n)) * mask
+    fourier_stack = stack if stack_in_fourier else fft2(stack)
+    fx = common.crop(np.fft.fftshift(fourier_stack, axes=(-2, -1)), (-1, n, n)) * mask
     out = ifft2(np.fft.ifftshift(fx, axes=(-2, -1))) * (size_out / size_in)
     return out.astype(stack.dtype)

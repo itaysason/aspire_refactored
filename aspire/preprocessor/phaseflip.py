@@ -7,12 +7,15 @@ import mrcfile
 from box import Box
 from aspire.utils.common import create_struct
 import time
-# from dev_utils import *
 
 
-def phaseflip_star_file(star_file, pixel_size=None, threads=1):
+def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
     """
-        todo add verbosity
+
+    :param star_file:
+    :param pixel_size:
+    :param return_in_fourier: To save computation can skip the ifft.
+    :return:
     """
     # star is a list of star lines describing projections
     star_records = read_star(star_file)['__root__']
@@ -25,9 +28,12 @@ def phaseflip_star_file(star_file, pixel_size=None, threads=1):
     stack = load_stack_from_file(mrc_path)
     resolution = stack.shape[1]
     num_projections = len(star_records)
-    rfft_resolution = resolution // 2 + 1
+    # rfft_resolution = resolution // 2 + 1
     # imhat_stack = np.zeros((num_projections, resolution, rfft_resolution), dtype='complex64')
-    projections = np.zeros((num_projections, resolution, resolution), dtype='float32')
+    if return_in_fourier:
+        projections = np.zeros((num_projections, resolution, resolution), dtype='complex64')
+    else:
+        projections = np.zeros((num_projections, resolution, resolution), dtype='float32')
 
     # Initializing pixel_size
     if pixel_size is None:
@@ -38,7 +44,8 @@ def phaseflip_star_file(star_file, pixel_size=None, threads=1):
             raise ValueError("Pixel size not provided and does not appear in STAR file")
 
     # Initializing parameter for cryo_CTF_Relion_fast
-    a, b, c = precompute_cryo_CTF_Relion_fast(resolution)
+    # a, b, c = precompute_cryo_CTF_Relion_fast(resolution, r=True)
+    a, b, c = precompute_cryo_CTF_Relion_fast(resolution, r=False)
 
     num_finished = 0
     for stack_name in stack_info:
@@ -53,32 +60,29 @@ def phaseflip_star_file(star_file, pixel_size=None, threads=1):
             curr_records.pixel_size = pixel_size
 
             # reference code
-            h = cryo_CTF_Relion(resolution, curr_records)
-            imhat = np.fft.fftshift(fft2(curr_image))
-            imhat *= np.sign(h)
-            pfim = ifft2(np.fft.ifftshift(imhat))
-
-            # Instead of shifting and shifting back im, shift h. Also using real fft instead.
             # h = cryo_CTF_Relion(resolution, curr_records)
-            # h = np.fft.fftshift(h)
-            # h = h[:, :resolution // 2 + 1]
-            # h = cryo_CTF_Relion_fast(a, b, c, curr_records)  # Faster way to obtain h.
-            # imhat2 = rfft2(curr_image)
+            # imhat = np.fft.fftshift(fft2(curr_image))
+            # imhat *= np.sign(h)
+            # pfim = ifft2(np.fft.ifftshift(imhat))
+
+            # Instead of shifting and shifting back im, shift h (when computing h it is already shifted).
+            h = cryo_CTF_Relion_fast(a, b, c, curr_records)
+            imhat = fft2(curr_image)
+            if return_in_fourier:
+                np.multiply(imhat, np.sign(h), out=projections[j])
+            else:
+                imhat *= np.sign(h)
+                projections[j] = ifft2(imhat)
+
+            # Use real fft instead.
+            # h = cryo_CTF_Relion_fast(a, b, c, curr_records)
             # np.multiply(imhat, np.sign(h), out=imhat_stack[j])  # can irfft2 back the whole stack
             # imhat2 *= np.sign(h)
             # pfim2 = irfft2(imhat2)
-            # print(comp(pfim.real, pfim2.real))
-            projections[j] = pfim.astype('float32')
             num_finished += 1
         toc = time.time()
         print('Finished {} images in {} seconds. In total finished {}/{}'.format(
             len(pos_in_stack), toc - tic, num_finished, len(star_records)))
-    # tic = time.time()
-    # projections = irfft2(imhat_stack, threads=threads)
-    # toc = time.time()
-    # print('Finished irfft2 in {} seconds'.format(toc - tic))
-    # from aspire.utils.read_write import write_mrc
-    # write_mrc('/scratch/itaysason/phaseflipped.mrcs', projections.T)
     return projections
 
 
@@ -180,11 +184,12 @@ def cryo_CTF_Relion_fast(shifted_cut_s_squared, shifted_cut_s_fourth_power, shif
     return np.sqrt(1 - star_record.amplitude_contrast ** 2) * np.sin(chi) - star_record.amplitude_contrast * np.cos(chi)
 
 
-def precompute_cryo_CTF_Relion_fast(square_side):
+def precompute_cryo_CTF_Relion_fast(square_side, r=True):
     s, theta = radius_norm(square_side, origin=fctr(square_side))
     s, theta = np.fft.fftshift(s), np.fft.fftshift(theta)
-    rfft_side = square_side // 2 + 1
-    s, theta = s[:, :rfft_side], theta[:, :rfft_side]
+    if r:
+        rfft_side = square_side // 2 + 1
+        s, theta = s[:, :rfft_side], theta[:, :rfft_side]
     a = s ** 2
     b = s ** 4
     c = theta.copy()

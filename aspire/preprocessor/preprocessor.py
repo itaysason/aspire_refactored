@@ -8,14 +8,18 @@ import aspire.utils.common as common
 import time
 
 
-def preprocess(star_file, crop_size=-1, downsample_size=89):
+def preprocess(star_file, pixel_size=None, crop_size=-1, downsample_size=89):
+    use_crop = crop_size > 0
+    use_downsample = downsample_size > 0
+    # flag to indicate not to transform back in phaseflip and to to transform in downsample
+    flag = use_downsample and not use_crop
     print('Starting phaseflip')
     tic = time.time()
-    stack = phaseflip_star_file(star_file)
+    stack = phaseflip_star_file(star_file, pixel_size, flag)
     toc = time.time()
     s = stack.shape
     print('Finished phaseflip in {} seconds, found {} images with resolution {}'.format(toc - tic, s[0], s[1]))
-    if crop_size > 0:
+    if use_crop:
         print('Start cropping')
         tic = time.time()
         stack = common.crop(stack, (-1, crop_size, crop_size))
@@ -24,10 +28,10 @@ def preprocess(star_file, crop_size=-1, downsample_size=89):
     else:
         print('Skip cropping')
         crop_size = s[1]
-    if downsample_size > 0:
+    if use_downsample > 0:
         print('Start downsampling')
         tic = time.time()
-        stack = downsample(stack, downsample_size)
+        stack = downsample(stack, downsample_size, stack_in_fourier=flag)
         toc = time.time()
         print('Finished downsampling in {} seconds, from {} to {}'.format(toc - tic, crop_size, downsample_size))
     else:

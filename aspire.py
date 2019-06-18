@@ -99,10 +99,11 @@ def classify_cmd(stack_file, output, num_nbor, nn_avg, max_shift, size_subset, o
 
 @simple_cli.command('preprocess', short_help='Gather projections from star file, downsample normalize and whiten them')
 @click.argument('star_file', type=click.Path(exists=True))
+@click.option('-ps', '--pixel_size', default=None)
 @click.option('-cs', '--crop_size', type=int, default=-1)
 @click.option('-ds', '--downsample_size', type=int, default=89)
 @click.option('-o', '--output', type=str, default='preprocessed_stack.mrcs')
-def preprocess_cmd(star_file, crop_size=-1, downsample_size=89, output='preprocessed_stack.mrcs'):
+def preprocess_cmd(star_file, pixel_size=None, crop_size=-1, downsample_size=89, output='preprocessed_stack.mrcs'):
     """ \b
         ############################
             Downsample Stack
@@ -114,7 +115,7 @@ def preprocess_cmd(star_file, crop_size=-1, downsample_size=89, output='preproce
         zero-centered Fourier mask for the re-sampling. The size of mask should
         be the same as the output image size.
     """
-    stack = preprocess(star_file, crop_size, downsample_size)
+    stack = preprocess(star_file, pixel_size, crop_size, downsample_size)
     write_mrc(output, stack)
 
 
