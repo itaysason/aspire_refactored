@@ -26,6 +26,11 @@ def downsample(stack, n, mask=None, stack_in_fourier=False):
     size_out = np.square(n)
     mask = 1 if mask is None else mask
     fourier_stack = stack if stack_in_fourier else fft2(stack)
-    fx = common.crop(np.fft.fftshift(fourier_stack, axes=(-2, -1)), (-1, n, n)) * mask
-    out = ifft2(np.fft.ifftshift(fx, axes=(-2, -1))) * (size_out / size_in)
-    return out.astype(stack.dtype)
+    num_images = stack.shape[0]
+    output = np.zeros((num_images, n, n), dtype='float32')
+    images_batches = np.array_split(np.arange(num_images), 100)
+    for batch in images_batches:
+        fx = common.crop(np.fft.fftshift(fourier_stack[batch], axes=(-2, -1)), (-1, n, n)) * mask
+        output[batch] = ifft2(np.fft.ifftshift(fx, axes=(-2, -1))) * (size_out / size_in)
+        print('finished {}/{}'.format(batch[-1] + 1, num_images))
+    return output
