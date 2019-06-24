@@ -366,7 +366,7 @@ def rot_align_fast(m, coeff, pairs):
     f_x_low, _ = f_prime_prime2(x_low)
     f_x_low_0 = f_x_low == 0
     x_high[f_x_low_0] = x_low[f_x_low_0]
-    f_x_high, _ = f_prime(x_high)
+    f_x_high, _ = f_prime_prime2(x_high)
     f_x_high_0 = f_x_high == 0
     x_low[f_x_high_0] = x_high[f_x_high_0]
 
