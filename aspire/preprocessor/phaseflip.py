@@ -86,7 +86,6 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
         toc = time.time()
         print('Finished {} images in {} seconds. In total finished {}/{}'.format(
             len(pos_in_stack), toc - tic, num_finished, len(star_records)))
-        break
     return projections
 
 
