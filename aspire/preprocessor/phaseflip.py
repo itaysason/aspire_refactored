@@ -30,10 +30,13 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
     num_projections = len(star_records)
     # rfft_resolution = resolution // 2 + 1
     # imhat_stack = np.zeros((num_projections, resolution, rfft_resolution), dtype='complex64')
+    # Todo - add temporary dir
     if return_in_fourier:
-        projections = np.zeros((num_projections, resolution, resolution), dtype='complex64')
+        projections = np.memmap('tmp_phaseflipped_projections.dat', dtype='complex64', mode='w+',
+                                shape=(num_projections, resolution, resolution))
     else:
-        projections = np.zeros((num_projections, resolution, resolution), dtype='float32')
+        projections = np.memmap('tmp_phaseflipped_projections.dat', dtype='float32', mode='w+',
+                                shape=(num_projections, resolution, resolution))
 
     # Initializing pixel_size
     if pixel_size is None:
@@ -83,6 +86,7 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
         toc = time.time()
         print('Finished {} images in {} seconds. In total finished {}/{}'.format(
             len(pos_in_stack), toc - tic, num_finished, len(star_records)))
+        break
     return projections
 
 
