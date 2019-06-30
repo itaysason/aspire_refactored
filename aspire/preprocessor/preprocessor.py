@@ -43,7 +43,7 @@ def preprocess(star_file, pixel_size=None, crop_size=-1, downsample_size=89):
     stack = np.ascontiguousarray(stack.T)
 
     print('Start normalizing background')
-    stack, _, _ = normalize_background(stack, stack.shape[1] * 0.45 // 100)
+    stack, _, _ = normalize_background(stack, stack.shape[1] * 45 // 100)
     print('Start prewhitening')
     stack = prewhiten(stack)
     print('Start global phaseflip')
