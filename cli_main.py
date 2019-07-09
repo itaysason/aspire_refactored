@@ -14,7 +14,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.group(chain=False, context_settings=CONTEXT_SETTINGS)
 @click.option('--debug/--no-debug', default=False, help="Default is --no-debug.")
 @click.option('-v', '--verbosity', default=0, help='Verbosity level (0-3).')
-def simple_cli(debug, verbosity):
+def cli(debug, verbosity):
     """\b
         \033[1;33m ASPIRE-Python \033[0m
         \b
@@ -30,7 +30,7 @@ def simple_cli(debug, verbosity):
     return
 
 
-@simple_cli.command('abinitio', short_help='Abinitio algorithm')
+@cli.command('abinitio', short_help='Abinitio algorithm')
 @click.argument('stack_file', type=click.Path(exists=True))
 @click.option('-o', '--output', default=None, type=click.Path(exists=False))
 @click.option('--num_images', type=int, default=None)
@@ -57,7 +57,7 @@ def abinitio_cmd(stack_file, output, num_images, max_shift):
     write_mrc(output, volume)
 
 
-@simple_cli.command('classify', short_help='Classification-Averaging algorithm')
+@cli.command('classify', short_help='Classification-Averaging algorithm')
 @click.argument('stack_file', type=click.Path(exists=True))
 @click.option('-o', '--output', default=None,
               type=click.Path(exists=False), help='output file name. (default averages.mrcs)')
@@ -97,7 +97,7 @@ def classify_cmd(stack_file, output, num_nbor, nn_avg, max_shift, size_subset, o
     write_mrc(ordered_output, ordered_averages)
 
 
-@simple_cli.command('preprocess', short_help='Gather projections from star file, downsample normalize and whiten them')
+@cli.command('preprocess', short_help='Gather projections from star file, downsample normalize and whiten them')
 @click.argument('star_file', type=click.Path(exists=True))
 @click.option('-ps', '--pixel_size', default=None)
 @click.option('-cs', '--crop_size', type=int, default=-1)
@@ -120,4 +120,4 @@ def preprocess_cmd(star_file, pixel_size=None, crop_size=-1, downsample_size=89,
 
 
 if __name__ == "__main__":
-    simple_cli()
+    cli()

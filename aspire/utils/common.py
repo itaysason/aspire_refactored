@@ -14,6 +14,7 @@ def crop(x, out_shape):
         center of x in dimension i. If the value is <= 0 then the dimension is left as is
     :return: out: The center of x with size outshape.
     """
+
     in_shape = np.array(x.shape)
     out_shape = np.array([s if s > 0 else in_shape[i] for i, s in enumerate(out_shape)])
     start_indices = in_shape // 2 - out_shape // 2

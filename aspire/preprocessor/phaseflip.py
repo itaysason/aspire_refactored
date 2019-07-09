@@ -7,16 +7,22 @@ import mrcfile
 from box import Box
 from aspire.utils.common import create_struct
 import time
+from tqdm import tqdm
+import warnings
+from aspire.common import *
+import tempfile
 
 
-def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
+def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False, verbose=0):
     """
 
     :param star_file:
     :param pixel_size:
     :param return_in_fourier: To save computation can skip the ifft.
+    :param verbose: Verbosity level (0: silent, 1: progress, 2: info, 3: debug).
     :return:
     """
+
     # star is a list of star lines describing projections
     star_records = read_star(star_file)['__root__']
     dir_path = os.path.dirname(star_file)
@@ -30,12 +36,14 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
     num_projections = len(star_records)
     # rfft_resolution = resolution // 2 + 1
     # imhat_stack = np.zeros((num_projections, resolution, rfft_resolution), dtype='complex64')
-    # Todo - add temporary dir
+    print(os.getcwd())
+    tmpf=tempfile.NamedTemporaryFile( dir = os.getcwd())    # Make temporary file - deleted once done.
+
     if return_in_fourier:
-        projections = np.memmap('tmp_phaseflipped_projections.dat', dtype='complex64', mode='w+',
+        projections = np.memmap(tmpf, dtype='complex64', mode='w+',
                                 shape=(num_projections, resolution, resolution))
     else:
-        projections = np.memmap('tmp_phaseflipped_projections.dat', dtype='float32', mode='w+',
+        projections = np.memmap(tmpf, dtype='float32', mode='w+',
                                 shape=(num_projections, resolution, resolution))
 
     # Initializing pixel_size
@@ -50,13 +58,19 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
     # a, b, c = precompute_cryo_CTF_Relion_fast(resolution, r=True)
     a, b, c = precompute_cryo_CTF_Relion_fast(resolution, r=False)
 
+    default_logger.info(f'Processing total of {num_projections}')
+    pbar=tqdm(total=num_projections, disable=(verbose != 1))
     num_finished = 0
     for stack_name in stack_info:
         mrc_path = os.path.join(dir_path, stack_name)
         stack = load_stack_from_file(mrc_path)
+
+        default_logger.info(f'Processing {mrc_path}')
+        default_logger.debug(f'Stack has {stack.shape[0]} images of size {stack.shape[1]}x{stack.shape[2]}')
+
         pos_in_stack = stack_info[stack_name].pos_in_stack
         pos_in_records = stack_info[stack_name].pos_in_records
-        tic = time.time()
+
         for i, j in zip(pos_in_stack, pos_in_records):
             curr_image = stack[i]
             curr_records = Box(cryo_parse_Relion_CTF_struct(star_records[j]))
@@ -75,7 +89,10 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
                 np.multiply(imhat, np.sign(h), out=projections[j])
             else:
                 imhat *= np.sign(h)
-                projections[j] = ifft2(imhat)
+                # Suppress warning on ifft2
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', category=np.ComplexWarning)
+                    projections[j] = ifft2(imhat)
 
             # Use real fft instead.
             # h = cryo_CTF_Relion_fast(a, b, c, curr_records)
@@ -83,9 +100,8 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
             # imhat2 *= np.sign(h)
             # pfim2 = irfft2(imhat2)
             num_finished += 1
-        toc = time.time()
-        print('Finished {} images in {} seconds. In total finished {}/{}'.format(
-            len(pos_in_stack), toc - tic, num_finished, len(star_records)))
+            pbar.update(1)
+
     return projections
 
 

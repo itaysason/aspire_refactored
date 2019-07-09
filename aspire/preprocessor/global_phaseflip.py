@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def global_phaseflip(stack):
+def global_phaseflip(stack, forceflip=False):
     """ Apply global phase flip to an image stack if needed.
 
     Check if all images in a stack should be globally phase flipped so that
@@ -16,7 +16,9 @@ def global_phaseflip(stack):
         >> stack = global_phaseflip_stack(stack)
 
     :param stack: stack of images to phaseflip if needed
+    :param forceflip: force global phase inversion
     :return stack: stack which might be phaseflipped when needed
+    :return flipped: True if phase was flipped and False otherwise
     """
 
     n = stack.shape[0]
@@ -34,6 +36,9 @@ def global_phaseflip(stack):
     signal_mean = np.mean(signal_mean)
     noise_mean = np.mean(noise_mean)
 
-    if signal_mean < noise_mean:
+    flipped=False
+    if (signal_mean < noise_mean) or forceflip:
+        flipped=True
         stack *= -1
-    return stack
+
+    return stack, flipped
