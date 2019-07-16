@@ -4,27 +4,25 @@ from aspire.class_averaging.compute_spca import compute_spca
 from aspire.class_averaging.initial_classification import initial_classification_fd_update
 from aspire.class_averaging.align_main import align_main
 from aspire.class_averaging.cryo_select_subset import cryo_select_subset
-import time
+from aspire.common import *
 
 
-def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pick=5000):
-    print('Computing the signal and noise of the images')
+def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pick=5000, verbose = 0):
+    default_logger.info('Step 1/4: Estimating SNR of images images')
     snr, signal, noise = common.estimate_snr(stack)
-    print('Signal is {}, noise is {}, snr is {}'.format(signal, noise, snr))
+    default_logger.info(f'Signal power =  {signal:.4e}')
+    default_logger.info(f'Noise power = {noise:.4e}')
+    default_logger.info(f'Estimated SNR = 1/{round(1.0/snr)} (more precisely {snr:.4e})')
 
     # spca data
-    print('Computing steerable PCA')
-    tic = time.time()
+    default_logger.info('Step 2/4: Computing steerable PCA')
     spca_data = compute_spca(stack, noise)
-    toc = time.time()
-    print('Finished computing steerable PCA in {} seconds'.format(toc - tic))
+    default_logger.info('Step 2/4: Finished computing steerable PCA')
 
     # initial classification fd update
-    print('Finding {} nearest neighbors')
-    tic = time.time()
-    classes, class_refl, rot, corr, _ = initial_classification_fd_update(spca_data, num_nbor)
-    toc = time.time()
-    print('Finished classification in {} seconds'.format(toc - tic))
+    default_logger.info('Step 3/4: Initial classification (Finding nearest neighbors for each projection)')
+    classes, class_refl, rot, corr, _ = initial_classification_fd_update(spca_data, num_nbor, verbose = verbose)
+    default_logger.info('Step 3/4: Finished initial classification')
 
     # VDM
     # class_vdm, class_vdm_refl, angle = cls.vdm(classes, np.ones(classes.shape), rot,
@@ -33,12 +31,10 @@ def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pi
     # align main
     list_recon = np.arange(classes.shape[0])
     use_em = True
-    print('Averaging images with their {} nearest neighbors with maximum shift of {}'.format(nn_avg, max_shift))
-    tic = time.time()
+    default_logger.info('Step 4/4: Averaging images with their {} nearest neighbors with maximum shift of {}'.format(nn_avg, max_shift))
     shifts, corr, averages, norm_variance = align_main(stack, rot, classes, class_refl, spca_data, nn_avg, max_shift,
-                                                       list_recon, 'my_tmpdir', use_em)
-    toc = time.time()
-    print('Finished averaging in {} seconds'.format(toc - tic))
+                                                       list_recon, 'my_tmpdir', use_em, verbose)
+    default_logger.info('Step 4/4: Finished averaging')
 
     # Picking images for abinitio. I think it should be in abinitio or in a completely separate function
     # indices = cryo_smart_select_subset(classes, size_output, contrast_priority, to_image)

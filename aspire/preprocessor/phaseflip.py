@@ -6,7 +6,6 @@ from scipy.io import loadmat
 import mrcfile
 from box import Box
 from aspire.utils.common import create_struct
-import time
 from tqdm import tqdm
 import warnings
 from aspire.common import *
@@ -19,7 +18,7 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False, ver
     :param star_file:
     :param pixel_size:
     :param return_in_fourier: To save computation can skip the ifft.
-    :param verbose: Verbosity level (0: silent, 1: progress, 2: info, 3: debug).
+    :param verbose: Verbosity level (0: silent, 1: progress, 2: debug).
     :return:
     """
 
@@ -36,7 +35,6 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False, ver
     num_projections = len(star_records)
     # rfft_resolution = resolution // 2 + 1
     # imhat_stack = np.zeros((num_projections, resolution, rfft_resolution), dtype='complex64')
-    print(os.getcwd())
     tmpf=tempfile.NamedTemporaryFile( dir = os.getcwd())    # Make temporary file - deleted once done.
 
     if return_in_fourier:
@@ -58,14 +56,14 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False, ver
     # a, b, c = precompute_cryo_CTF_Relion_fast(resolution, r=True)
     a, b, c = precompute_cryo_CTF_Relion_fast(resolution, r=False)
 
-    default_logger.info(f'Processing total of {num_projections}')
-    pbar=tqdm(total=num_projections, disable=(verbose != 1))
+    default_logger.debug(f'Processing total of {num_projections}')
+    pbar=tqdm(total=num_projections, disable=(verbose != 1), desc="Phaseflipping", leave=True)
     num_finished = 0
     for stack_name in stack_info:
         mrc_path = os.path.join(dir_path, stack_name)
         stack = load_stack_from_file(mrc_path)
 
-        default_logger.info(f'Processing {mrc_path}')
+        default_logger.debug(f'Processing {mrc_path}')
         default_logger.debug(f'Stack has {stack.shape[0]} images of size {stack.shape[1]}x{stack.shape[2]}')
 
         pos_in_stack = stack_info[stack_name].pos_in_stack

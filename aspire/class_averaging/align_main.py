@@ -1,9 +1,11 @@
 import numpy as np
 import aspire.utils.common as common
 import pyfftw
+from tqdm import tqdm
+from aspire.common import *
 
 
-def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_recon, tmpdir, use_em):
+def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_recon, tmpdir, use_em, verbose):
     data = data.swapaxes(0, 2)
     data = data.swapaxes(1, 2)
     data = np.ascontiguousarray(data)
@@ -72,8 +74,10 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
     multiply_time = 0
     dot_time = 0
     rest_time = 0
+
+    pbar = tqdm(total=len(list_recon), disable=(verbose != 1), desc="Computing averages", leave=True)
     for j in range(len(list_recon)):
-        print('averaging image {} out of {}'.format(j, len(list_recon)))
+        default_logger.debug('Averaging image {} out of {}'.format(j, len(list_recon)))
         angle_j[1:] = angle[list_recon[j], :k]
         refl_j[1:] = refl[list_recon[j], :k]
         index[1:] = class_vdm[list_recon[j], :k]
@@ -93,6 +97,8 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
         tic1 = time.time()
 
         # 190 sec for 9000 images, 103 for matlab
+        # "Denoise" current image by projecting it on the eigen-images. All neighbors of the current image
+        # are aligned against this denoised image.
         tmp = np.dot(eig_im[:, freqs == 0], coeff[freqs == 0, list_recon[j]]) + 2 * np.real(
             np.dot(eig_im[:, freqs != 0], coeff[freqs != 0, list_recon[j]])) + mean_im
         tic2 = time.time()
@@ -106,19 +112,23 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
         tic3 = time.time()
 
         # 651 sec for 9000 images, 261 for matlab
+        # Compute all shifts of image j
         pf_images[:] = images2.reshape((k + 1, resolution * resolution), order='F').T
         np.multiply(conj_phase, np.conj(pf1), out=pf2)
         tic4 = time.time()
 
         # 313 sec for 9000 images, 233 for matlab
+        # Compute correlations between image j and all its shifts and its neighboring images
         np.dot(pf2, pf_images, out=c)
         tic5 = time.time()
 
         # 307 sec for 9000 images, 100 for matlab
+        # Estimate shifts to re-align neighbors with image j.
         ind = np.lexsort((np.angle(c), np.abs(c)), axis=0)[-1]
         ind_for_c = ind, np.arange(len(ind))
         corr[j] = c[ind_for_c]
 
+        # Re-align neighbors with image j.
         np.multiply(pf_images, conj_phase[ind].T, out=pf_images_shift)
         np.var(pf_images_shift, 1, ddof=1, out=var)
         norm_variance[j] = np.linalg.norm(var)
@@ -136,12 +146,15 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
         dot_time += tic5 - tic4
         rest_time += tic6 - tic5
 
-    print(rotate_time)
-    print(mult_time)
-    print(cfft_time)
-    print(multiply_time)
-    print(dot_time)
-    print(rest_time)
+        pbar.update(1)
+
+    default_logger.debug(f'Timeings:')
+    default_logger.debug(f'\tRotating images (rotate_time) {rotate_time:.2f} sec')
+    default_logger.debug(f'\tDenoising current image (mult_time) {mult_time:.2f} sec')
+    default_logger.debug(f'\tFFT neighbors (cfft_time) {cfft_time:.2f} sec')
+    default_logger.debug(f'\tComputing shifts of image j (multiply_time) {multiply_time:.2f} sec')
+    default_logger.debug(f'\tComputing correlations (dot_time) {dot_time}.2f sec')
+    default_logger.debug(f'\tCompute average image (rest_time) {rest_time}.2f sec')
     output = output.swapaxes(1, 2)
     output = output.swapaxes(0, 2)
     output = np.ascontiguousarray(output)

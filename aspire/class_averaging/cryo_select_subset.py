@@ -57,6 +57,7 @@ def cryo_smart_select_subset(classes, size_output, priority=None, to_image=None)
 
 
 def cryo_image_contrast(projs, r=None):
+    # Redundency with stack.contrast (which I verified carefully)
     n = projs.shape[0]
     if r is None:
         r = n // 2

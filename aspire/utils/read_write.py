@@ -18,3 +18,12 @@ def write_mrc(file_path, x):
 
 def read_mrc(file_path):
     return np.ascontiguousarray(mrcfile.open(file_path).data.T)
+
+
+def print_mrc_info(file_path):
+    mrc = mrcfile.mmap(file_path)
+    mrc.print_header()
+    mrc.close()
+    return
+
+

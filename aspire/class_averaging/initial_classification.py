@@ -2,11 +2,16 @@ import numpy as np
 import aspire.utils.common as common
 import scipy.sparse as sps
 import scipy.linalg as scl
+from tqdm import tqdm
+from aspire.common import *
 
 
-def initial_classification_fd_update(spca_data, n_nbor, is_rand=False):
+def initial_classification_fd_update(spca_data, n_nbor, is_rand=False, verbose = 0):
+
+    print(f"XXX Versose = {verbose}")
+
     # unpacking spca_data
-    print('starting initial_classification')
+    default_logger.debug('Starting initial_classification')
     coeff = spca_data.coeff.copy()
     freqs = spca_data.freqs.copy()
     eigval = spca_data.eigval.copy()
@@ -18,7 +23,7 @@ def initial_classification_fd_update(spca_data, n_nbor, is_rand=False):
         coeff[:, i] /= np.linalg.norm(coeff[:, i])
 
     coeff[freqs == 0] *= np.sqrt(2)
-    print('starting bispec_2drot_large')
+    default_logger.info('Computing bispectrum')
     coeff_b, coeff_b_r, _ = bispec_2drot_large(coeff, freqs, eigval)
 
     concat_coeff = np.concatenate((coeff_b, coeff_b_r), axis=1)
@@ -38,23 +43,29 @@ def initial_classification_fd_update(spca_data, n_nbor, is_rand=False):
             batch_size = 2000
             num_batches = int(np.ceil(1.0 * n_im / batch_size))
             classes = np.zeros((n_im, n_nbor), dtype='int')
+
+            pbar = tqdm(total=n_im, disable=(verbose != 1), desc="Finding nearest neighbors", leave=True)
             for i in range(num_batches):
                 start = i * batch_size
                 finish = min((i + 1) * batch_size, n_im)
                 corr = np.real(np.dot(np.conjugate(coeff_b[:, start: finish]).T, concat_coeff))
                 classes[start: finish] = np.argsort(-corr, axis=1)[:, 1: n_nbor + 1]
-                print('processed {}/{} images'.format(finish, n_im))
+                default_logger.debug('processed {}/{} images'.format(finish, n_im))
+                pbar.update(finish-start+1)
         else:
             # TODO implement random nn
             batch_size = 2000
             num_batches = int(np.ceil(n_im / batch_size))
             classes = np.zeros((n_im, n_nbor), dtype='int')
+
+            pbar = tqdm(total=n_im, disable=(verbose != 1), desc="Finding nearest neighbors", leave=True)
             for i in range(num_batches):
                 start = i * batch_size
                 finish = min((i + 1) * batch_size, n_im)
                 corr = np.real(np.dot(np.conjugate(coeff_b[:, start: finish]).T, concat_coeff))
                 classes[start: finish] = np.argsort(-corr, axis=1)[:, 1: n_nbor + 1]
-                print('processed {}/{} images'.format(finish, n_im))
+                default_logger.debug('processed {}/{} images'.format(finish, n_im))
+                pbar.update(finish - start + 1)
 
     classes = np.array(classes)
     max_freq = np.max(freqs)
@@ -65,7 +76,7 @@ def initial_classification_fd_update(spca_data, n_nbor, is_rand=False):
 
     # maybe pairs should also be transposed
     pairs = np.stack((classes.flatten('F'), np.tile(np.arange(n_im), n_nbor)), axis=1)
-    print('starting rot_align')
+    default_logger.info('Compute in-plane rotational alignment within nearest neighbors')
     corr, rot = rot_align_fast(max_freq, cell_coeff, pairs)
 
     rot = rot.reshape((n_im, n_nbor), order='F')
@@ -284,6 +295,7 @@ def rot_align_fast(m, coeff, pairs):
     :param pairs:
     :return:
     """
+
     n_theta = 360
     p = pairs.shape[0]
     c = np.zeros((m + 1, p), dtype='complex128')
@@ -390,7 +402,8 @@ def rot_align_fast(m, coeff, pairs):
 
         # Stop criteria
         if np.all(np.abs(dx) < precision):
-            print(np.sum(np.abs(dx) < precision))
+            # XXX What is this printout?
+            # print(np.sum(np.abs(dx) < precision))
             break
 
         # Else update parameters
@@ -404,7 +417,8 @@ def rot_align_fast(m, coeff, pairs):
         x_low[converged] = rts[converged]
         x_high[converged] = rts[converged]
 
-        print(np.sum(np.abs(dx) < precision))
+        # XXX What is this printout?
+        # print(np.sum(np.abs(dx) < precision))
 
     rot = rts
     m_list = np.arange(m + 1)
