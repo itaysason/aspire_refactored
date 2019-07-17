@@ -82,7 +82,7 @@ def cfft2(x, axes=(-1, -2)):
         return np.fft.fftshift(np.transpose(np.fft.fft2(np.transpose(np.fft.ifftshift(x)))))
     elif len(x.shape) == 3:
         y = np.fft.ifftshift(x, axes=axes)
-        y = np.fft.ifft2(y, axes=axes)
+        y = np.fft.fft2(y, axes=axes)
         y = np.fft.fftshift(y, axes=axes)
         return y
     else:
