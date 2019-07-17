@@ -1,5 +1,5 @@
 import numpy as np
-from aspire.utils.common import fill_struct, fast_cfft2, fast_icfft2
+from aspire.utils.common import fill_struct, cfft2, icfft2
 from pyfftw.interfaces import numpy_fft
 import finufftpy
 
@@ -280,7 +280,7 @@ def im_backproject(im, rot_matrices, half_pixel=False):
         im = np.einsum('ijk, ij -> ijk', im, np.exp(1j * phase_shift))
 
     im = im.transpose((1, 0, 2))
-    im_f = fast_cfft2(im, axes=(0, 1)) / resolution ** 2
+    im_f = cfft2(im, axes=(0, 1)) / resolution ** 2
 
     if resolution % 2 == 0:
         if half_pixel:
@@ -308,9 +308,9 @@ def im_filter(im, filter_f):
     if im.shape[:2] != filter_f.shape[:2]:
         raise ValueError('The size of the images and filters must match')
 
-    im_f = fast_cfft2(im, axes=(0, 1))
+    im_f = cfft2(im, axes=(0, 1))
     im_filtered_f = im_f * filter_f
-    im_filtered = np.real(fast_icfft2(im_filtered_f, axes=(0, 1)))
+    im_filtered = np.real(icfft2(im_filtered_f, axes=(0, 1)))
     return im_filtered
 
 

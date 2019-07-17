@@ -13,7 +13,7 @@ def compute_spca(images, noise_v_r, adaptive_support=False):
         # energy_thresh = 0.99
         #
         # # Estimate bandlimit and compact support size
-        # [bandlimit, support_size] = choose_support_v6(common.fast_cfft2(images), energy_thresh)
+        # [bandlimit, support_size] = choose_support_v6(common.cfft2(images), energy_thresh)
         # # Rescale between 0 and 0.5
         # bandlimit = bandlimit * 0.5 / np.floor(resolution / 2.0)
 
@@ -91,7 +91,7 @@ def compute_spca(images, noise_v_r, adaptive_support=False):
 #     r_max = N
 #
 #     img_f = proj_ctf_noisy
-#     img = (common.fast_icfft2(img_f)) * L
+#     img = (common.icfft2(img_f)) * L
 #     mean_data = np.mean(img, axis=0)  # Remove mean from the data
 #     img = img - mean_data
 #

@@ -98,9 +98,9 @@ def cryo_prewhiten(proj, noise_response, rel_threshold=None, verbose=0):
     for i in range(num_images):
         pp[start_idx:end_idx, start_idx:end_idx] = proj[i]
 
-        fp = common.fast_cfft2(pp)
+        fp = common.cfft2(pp)
         fp *= one_over_fnz_as_mat
-        pp2 = common.fast_icfft2(fp)
+        pp2 = common.icfft2(fp)
 
         p2[i] = np.real(pp2[start_idx:end_idx, start_idx:end_idx])
         default_logger.debug(f'Processed {i} /{num_images} images')

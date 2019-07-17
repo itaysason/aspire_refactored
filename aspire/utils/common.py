@@ -77,35 +77,11 @@ def disc(n, r=None, inner=False):
     return radiisq <= r ** 2
 
 
-def cfft2(x, axes=(-1, -2)):
-    if len(x.shape) == 2:
-        return np.fft.fftshift(np.transpose(np.fft.fft2(np.transpose(np.fft.ifftshift(x)))))
-    elif len(x.shape) == 3:
-        y = np.fft.ifftshift(x, axes=axes)
-        y = np.fft.fft2(y, axes=axes)
-        y = np.fft.fftshift(y, axes=axes)
-        return y
-    else:
-        raise ValueError("x must be 2D or 3D")
-
-
-def icfft2(x, axes=(-1, -2)):
-    if len(x.shape) == 2:
-        return np.fft.fftshift(np.transpose(np.fft.ifft2(np.transpose(np.fft.ifftshift(x)))))
-    elif len(x.shape) == 3:
-        y = np.fft.ifftshift(x, axes=axes)
-        y = np.fft.ifft2(y, axes=axes)
-        y = np.fft.fftshift(y, axes=axes)
-        return y
-    else:
-        raise ValueError("x must be 2D or 3D")
-
-
 def icfft(x, axis=0):
     return np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(x, axis), axis=axis), axis)
 
 
-def fast_cfft2(x, axes=(-1, -2)):
+def cfft2(x, axes=(-1, -2)):
     if len(x.shape) == 2:
         return fftshift(np.transpose(fft2(np.transpose(ifftshift(x)))))
     elif len(x.shape) == 3:
@@ -117,7 +93,7 @@ def fast_cfft2(x, axes=(-1, -2)):
         raise ValueError("x must be 2D or 3D")
 
 
-def fast_icfft2(x, axes=(-1, -2)):
+def cfft2(x, axes=(-1, -2)):
     if len(x.shape) == 2:
         return fftshift(np.transpose(ifft2(np.transpose(ifftshift(x)))))
 
