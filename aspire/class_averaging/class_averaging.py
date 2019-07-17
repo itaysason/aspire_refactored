@@ -31,13 +31,13 @@ def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pi
     # align main
     list_recon = np.arange(classes.shape[0])
     use_em = True
-    default_logger.info('Step 4/4: Averaging images with their {} nearest neighbors with maximum shift of {}'.format(nn_avg, max_shift))
+    default_logger.info('Step 4/4: Averaging images with their {} nearest neighbors with maximum shift of {} pixels'.format(nn_avg, max_shift))
     shifts, corr, averages, norm_variance = align_main(stack, rot, classes, class_refl, spca_data, nn_avg, max_shift,
                                                        list_recon, 'my_tmpdir', use_em, verbose)
     default_logger.info('Step 4/4: Finished averaging')
 
     # Picking images for abinitio. I think it should be in abinitio or in a completely separate function
     # indices = cryo_smart_select_subset(classes, size_output, contrast_priority, to_image)
-    print('Finding top {} images by contrast'.format(n_images_to_pick))
+    print('Finding {} images with highest contrast'.format(n_images_to_pick))
     ordered_averages = cryo_select_subset(averages, classes, n_images_to_pick)
     return averages, ordered_averages

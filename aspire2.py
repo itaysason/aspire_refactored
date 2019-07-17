@@ -276,22 +276,30 @@ def info_cmd(input):
 @click.option('-i', '--input', type=click.Path(exists=True),  help='Input stack name.')
 @click.option('-o', '--output', type=click.Path(exists=False),  help='Sorted index list (text file).')
 @click.option('--method', type=click.Choice(['contrast', 'bandpass']))
-def sort_stack_cmd(input, output, method):
+@click.option('--lowpass', default=0.05,
+              help='Low frequency cutoff for bandpass filtering (between 0 and 0.5)')
+@click.option('--highpass', type=float, default=0.2,
+              help='Low frequency cutoff for bandpass filtering (between 0 and 0.5)')
+def sort_stack_cmd(input, output, method, lowpass, highpass):
     """\b
             Sort a stack of projections.
             \b
-            Sort a stack of projections (by either contrast of energy in a bandpass) and
+            Sort a stack of projections (by either contrast of energy in a bandpass) and return a file
+            with the indices of the images in sorted order (zero-based indexing). The parameters lowpoass
+            and highpass are ignored for contrast filtering.
         """
 
     stack_data = read_mrc(input) # XXX Change all "stack" above to "projections". Change function names to _cmd
     stack_data=stack_data.T # XXX Remove once we change all stack to python convention
     if method == "contrast":
         c = stack.contrast(stack_data)
+        idx = c[:, 1].argsort()
+        idx = idx[::-1]
+        c = c[idx, :]
     else:
-        raise NotImplementedError("bandpass sorting not implemented yet")
-    idx = c[:,1].argsort()
-    idx = idx[::-1]
-    c = c[idx,:]
+        c =stack.sort_by_bandpass(stack_data)
+
+    print(c)
     np.savetxt(output, c, fmt='%07d    %e')
 
 @stack_cmds.command('select', short_help='Select a subset of the projections.')
@@ -333,7 +341,9 @@ def select_cmd(input, output, index_file, max_images):
     stack_data = read_mrc(input)  # XXX Change all "stack" above to "projections". Change function names to _cmd
     stack_data = stack_data.T
     default_logger.info(f"Selecting images {n} from MRC file")
-    stack_data = stack_data[idx, :, :]  # XXX Remove once we change all stack to python convention
+    stack_data = stack_data[idx.flatten(), :, :]  # XXX Remove once we change all stack to python convention
+                        # flatten is required to convert an Nx1 matrix into a 1D array. Otherwise stack_data
+                        # becomes 4D.
 
     # Write output stack
     default_logger.info(f"Writing MRC file {output}")
@@ -392,5 +402,6 @@ def abinitio_cmd(ctx,input,output,symmetry):
     Currently supported symmetry groups are Cn, n>=1.
     """
 
+    
 if __name__ == "__main__":
     cli()

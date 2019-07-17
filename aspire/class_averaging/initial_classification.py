@@ -8,8 +8,6 @@ from aspire.common import *
 
 def initial_classification_fd_update(spca_data, n_nbor, is_rand=False, verbose = 0):
 
-    print(f"XXX Versose = {verbose}")
-
     # unpacking spca_data
     default_logger.debug('Starting initial_classification')
     coeff = spca_data.coeff.copy()
