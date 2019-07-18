@@ -2,7 +2,7 @@ import mrcfile
 import numpy as np
 from aspire.common import default_logger
 from aspire.utils.common  import cfft2
-from aspire.utils.common  import fast_cfft2
+from aspire.utils.common  import cfft2
 import scipy.io
 
 def contrast(instack, radius=None):
@@ -90,7 +90,7 @@ def sort_by_bandpass(projs, lc = 0.05, hc = 0.2):
         raise ValueError(f"Input stack must be KxLxL stack but given {projs.shape}")
 
     # To convert a Python stack to matlab used permute(projs,[2 3 1]) or prohjs.T in Python
-    fp = fast_cfft2((projs))
+    fp = cfft2((projs))
     l = (projs.shape[1] - 1) / 2
     x, y = image_grid(projs.shape[1])
     idx1 = np.where(np.multiply(x, x) + np.multiply(y, y) < (l * lc) ** 2)

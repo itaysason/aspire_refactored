@@ -1,7 +1,8 @@
 import numpy as np
 import scipy.sparse as sps
 import time
-
+from aspire.common import default_logger
+from tqdm import tqdm
 
 def cryo_clmatrix_cpu_ref(pf, nk=None, verbose=1, max_shift=15, shift_step=1, map_filter_radius=0, ref_clmatrix=0, ref_shifts_2d=0):
     n_projs = pf.shape[2]
@@ -165,7 +166,7 @@ def cryo_clmatrix_cpu_ref(pf, nk=None, verbose=1, max_shift=15, shift_step=1, ma
     return clstack, corrstack, shift_equations, shift_equations_map, clstack_mask
 
 
-def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1):
+def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1, verbose = 0):
     n_projs = pf.shape[2]
     n_shifts = int(np.ceil(2 * max_shift / shift_step + 1))
     n_theta = pf.shape[1]
@@ -215,6 +216,8 @@ def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1):
         all_shift_phases[i] = np.exp(-2 * np.pi * 1j * rk2 * shift / (2 * r_max + 1))
 
     stack_p2_shifted_flipped = np.zeros((r_max, n_shifts * n_theta), pf3.dtype)
+    pbar=tqdm(total=n_projs*(n_projs-1)/2, disable=(verbose != 1), desc="Processed image pairs", leave=True)
+    default_logger.debug(f"Compute correlation between pairs of images")
     for j in range(n_projs - 1, 0, -1):
         p2_flipped = np.conj(pf3[j])
         for k in range(n_shifts):
@@ -247,7 +250,9 @@ def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1):
             shifts_1d[i, j] = -max_shift + shift_idx * shift_step
 
             toc = time.time()
-            print(i, j, toc - tic)
+            default_logger.debug(f"Pair ({i},{j}): cl=({clstack[i, j]},{clstack[j, i]}), "
+                                 f"corr={corrstack[i, j]:4.3f}, time={toc-tic:5.4f} sec")
+            pbar.update(1)
 
     for i in range(n_projs):
         for j in range(i + 1, n_projs):

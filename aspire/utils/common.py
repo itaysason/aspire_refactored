@@ -93,7 +93,7 @@ def cfft2(x, axes=(-1, -2)):
         raise ValueError("x must be 2D or 3D")
 
 
-def cfft2(x, axes=(-1, -2)):
+def icfft2(x, axes=(-1, -2)):
     if len(x.shape) == 2:
         return fftshift(np.transpose(ifft2(np.transpose(ifftshift(x)))))
 

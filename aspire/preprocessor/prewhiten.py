@@ -135,7 +135,7 @@ def cryo_epsds(imstack, samples_idx, max_d, verbose=0):
                 r2[i+p-1, j+p-1] = r[idx-1]
 
     w = gwindow(p, max_d)
-    p2 = common.fast_cfft2(r2 * w)
+    p2 = common.cfft2(r2 * w)
 
     p2 = p2.real
 

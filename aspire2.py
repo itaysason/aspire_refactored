@@ -13,6 +13,7 @@ from aspire.class_averaging.class_averaging import class_averaging
 from aspire.abinitio.cryo_abinitio_c1_worker import cryo_abinitio_c1_worker
 from aspire.utils.read_write import *
 import stack
+import string
 
 np.random.seed(1137)
 
@@ -299,7 +300,6 @@ def sort_stack_cmd(input, output, method, lowpass, highpass):
     else:
         c =stack.sort_by_bandpass(stack_data)
 
-    print(c)
     np.savetxt(output, c, fmt='%07d    %e')
 
 @stack_cmds.command('select', short_help='Select a subset of the projections.')
@@ -307,7 +307,9 @@ def sort_stack_cmd(input, output, method, lowpass, highpass):
 @click.option('-o', '--output', type=click.Path(exists=False),  help='output stack name.')
 @click.option('--index-file', type=click.Path(exists=True), help='file with indices of images to select (zero-based)')
 @click.option('--max-images', type=int, help='Maximal number of images to select')
-def select_cmd(input, output, index_file, max_images):
+@click.option('--start-from', type=int, default=0, help='Starting line in the index file (zero-based)')
+@click.option('--step', type=int, default=1, help='Number of indices to skip after each selected image.')
+def select_cmd(input, output, index_file, max_images,start_from, step):
     """\b
             Select a subset of projections
             \b
@@ -333,7 +335,7 @@ def select_cmd(input, output, index_file, max_images):
         max_images = index_info.shape[0]+1
 
     n=np.minimum(index_info.shape[0], max_images)
-    idx=index_info[:n]
+    idx=index_info[start_from:n:step]
     idx=idx.astype(np.int64)
 
     # Read input stack
@@ -359,7 +361,7 @@ def select_cmd(input, output, index_file, max_images):
               help=("Number of nearest neighbors to find for each "
                     "image during initial classification. (default=100)"))
 @click.option("--nn_avg", default=50, help="Number of images to average into each class. (default=50)")
-@click.option("--max_shift", default=15, help="Max shift of projections from the center. (default=15)")
+@click.option("--max-shift", default=15, help="Max shift of projections from the center. (default=15)")
 @click.option("--subset-select", default=5000, help="Number of images to pick for abinitio. (default=5000)")
 @click.option("--subset-name", default=None, help="Name of file for top images. (default averages_subset.mrcs)")
 @click.pass_context
@@ -391,9 +393,11 @@ def classify_cmd(ctx, input, output, num_nbor, nn_avg, max_shift, subset_select,
 @click.option('-i', '--input', type=click.Path(exists=True),  help='Input stack name.')
 @click.option('-o', '--output', default=None,
               type=click.Path(exists=False), help='Filename for reconstructed map.')
-@click.option('--symmetry', type=str,  default='C1', help='Symmetry group.')
+@click.option('--symmetry', type=str,  default='C1', help='Symmetry group (case-insensitive).')
+@click.option("--max-shift", default=0.15,
+              help="Max to search for common lines as percentage of image size. (default=0.15)")
 @click.pass_context
-def abinitio_cmd(ctx,input,output,symmetry):
+def abinitio_cmd(ctx,input,output,symmetry,max_shift):
     """ \b
     Ab-initio reconstruction from stack of images.
     \b
@@ -402,6 +406,40 @@ def abinitio_cmd(ctx,input,output,symmetry):
     Currently supported symmetry groups are Cn, n>=1.
     """
 
-    
+    default_logger.info(f'Loading {input}')
+    stack = np.ascontiguousarray(read_mrc(input))
+
+
+    symmetry_type=symmetry[0].upper() # First letter indicates the C/D/T/O/I
+    if symmetry_type == 'C':
+        n_symm = int(symmetry[1:])
+
+        if n_symm == 1:
+            volume = cryo_abinitio_c1_worker(stack, 2, max_shift=max_shift,verbose=ctx.obj['VERBOSITY'])
+        elif n_symm ==2:
+            raise NotImplementedError("C2 symmetry is not yet implemented")
+        elif n_symm in [3,4]:
+            raise NotImplementedError("C3/C4 symmetry is not yet implemented")
+        else:
+            raise NotImplementedError("Cn symmetry is not yet implemented")
+
+    elif symmetry_type == 'D':
+        n_symm=int(symmetry[1:])
+        if n_symm == 1:
+            raise ValueError("No D1 symmetry. Use C1 instead.")
+        elif n_symm == 2: # Call D2
+            pass
+        else:
+            raise NotImplementedError("Dn for n>2 is not yet implemented")
+    elif symmetry == 'T':
+        raise NotImplementedError("Tetrahedral symmetry is not yet implemented")
+    elif symmetry == 'O':
+        raise NotImplementedError("Octahedral symmetry is not yet implemented")
+    elif symmetry == 'I':
+        raise NotImplementedError("Icosahedral symmetry is not yet implemented")
+    else:
+        raise ValueError("Symmetry group must be C/D/T/O/I (e.g., C1, C7, D2, T, O, I)")
+
+    write_mrc(output, volume)
 if __name__ == "__main__":
     cli()
