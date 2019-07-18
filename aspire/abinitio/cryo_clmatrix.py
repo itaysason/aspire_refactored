@@ -216,7 +216,7 @@ def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1, verbose = 0):
         all_shift_phases[i] = np.exp(-2 * np.pi * 1j * rk2 * shift / (2 * r_max + 1))
 
     stack_p2_shifted_flipped = np.zeros((r_max, n_shifts * n_theta), pf3.dtype)
-    pbar=tqdm(total=n_projs*(n_projs-1)/2, disable=(verbose != 1), desc="Processed image pairs", leave=True)
+    pbar=tqdm(total=int(n_projs*(n_projs-1)/2), disable=(verbose != 1), desc="Processed image pairs", leave=True)
     default_logger.debug(f"Compute correlation between pairs of images")
     for j in range(n_projs - 1, 0, -1):
         p2_flipped = np.conj(pf3[j])

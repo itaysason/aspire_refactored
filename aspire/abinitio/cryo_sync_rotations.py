@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.sparse.linalg as spsl
-
+from aspire.common import default_logger
 
 def cryo_sync_rotations(s, rots_ref=None, verbose=0):
     """
@@ -27,9 +27,8 @@ def cryo_sync_rotations(s, rots_ref=None, verbose=0):
     d = np.real(d)
     sort_idx = np.argsort(-d)
 
-    if verbose:
-        print('Top eigenvalues:')
-        print(d[sort_idx])
+    default_logger.info("Top eigenvalues of synchronization matrix:")
+    default_logger.info(f"{d[sort_idx]}")
 
     v = np.real(v[:, sort_idx[:3]])
     v1 = v[:2*k:2].T.copy()

@@ -67,6 +67,6 @@ def cryo_abinitio_c1_worker(stack, algo, n_theta=360, n_r=0.5, max_shift=0.15, s
     tic = time.time()
     v1, _ = cryo_estimate_mean(stack, params)
     toc = time.time()
-    default_logger.debug('Finished reconstrucint map in {} secs'.format(toc - tic))
+    default_logger.debug(f'Finished reconstrucint map in {(toc - tic):5.1f} secs')
     v1 = v1.real
     return v1

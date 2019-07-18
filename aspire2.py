@@ -1,11 +1,10 @@
 import click
-import numpy as np
 from aspire.common import *
 import  aspire.utils.common
 from aspire.preprocessor.phaseflip import phaseflip_star_file
 from aspire.preprocessor.downsample import downsample
 from aspire.preprocessor.normalize_background import normalize_background
-from aspire.preprocessor.global_phaseflip import global_phaseflip
+import aspire.preprocessor.global_phaseflip
 from aspire.preprocessor.prewhiten import prewhiten
 
 from aspire.preprocessor.preprocessor import preprocess
@@ -13,15 +12,16 @@ from aspire.class_averaging.class_averaging import class_averaging
 from aspire.abinitio.cryo_abinitio_c1_worker import cryo_abinitio_c1_worker
 from aspire.utils.read_write import *
 import stack
-import string
 
 np.random.seed(1137)
 
 # CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group()
-@click.option('-v', '--verbosity', type=click.IntRange(0, 3), default=0, help='Verbosity level (0: silent, 1: progress, 2: debug).',show_default=True)
-@click.option('--logfile', default=None, type=click.Path(exists=False), help='Filename of log file for log messages.')
+@click.option('-v', '--verbosity', type=click.IntRange(0, 3), default=0,
+              help='Verbosity level (0: silent, 1: progress, 2: debug).',show_default=True)
+@click.option('--logfile', default=None, type=click.Path(exists=False),
+              help='Filename of log file for log messages.')
 @click.pass_context
 def cli(ctx, verbosity, logfile):
     """\b
@@ -46,16 +46,15 @@ def cli(ctx, verbosity, logfile):
 
 
 @cli.group('stack', short_help='Process 2D stack')
-@click.pass_context
 #   Bug notice:
 #   Putting required=True on the above two options breaks the help on sub-commands.
 #   See https://github.com/pallets/click/issues/814.
 #   For now, check manually that files were given.
-def stack_cmds(ctx):
+def stack_cmds():
     """\b
         Two-dimensional processing of a stack of images.
     """
-
+    
     return
 
 
@@ -65,16 +64,16 @@ def stack_cmds(ctx):
 @click.option('--pixA', 'pixA', type=float, default=None, help=',Pixel size in Angstroms (if missing from STAR file).',
               show_default=True)
 @click.pass_context
-def phaseflip_cmd(ctx, star_file, output, pixA):
+def phaseflip_cmd(ctx, star_file, output, pixa):
     """\b
         Apply phase-flipping to a stack of images.
     """
 
     default_logger.debug('Starting phaseflip')
-    stack=phaseflip_star_file(star_file, pixA, return_in_fourier=False, verbose=ctx.obj['VERBOSITY'])
-    stack = np.ascontiguousarray(stack.T)
+    phaseflipped_stack = phaseflip_star_file(star_file, pixa, return_in_fourier=False, verbose=ctx.obj['VERBOSITY'])
+    phaseflipped_stack = np.ascontiguousarray(phaseflipped_stack.T)
     default_logger.info(f'Saving MRC file {output}')
-    write_mrc(output, stack)
+    write_mrc(output, phaseflipped_stack)
     default_logger.debug('Done phaseflip')
 
     return
@@ -92,14 +91,14 @@ def crop_cmd(input, output, new_size):
 
     default_logger.debug('Starting crop')
     default_logger.debug(f'Reading MRC file {input}')
-    stack=read_mrc(input)
-    stack = np.ascontiguousarray(stack.T)
-    default_logger.debug(f'stack of size {stack.shape}')
-    default_logger.debug(f'Cropping from size {stack.shape[1]}x{stack.shape[2]} to size {new_size}x{new_size}')
-    stack =  aspire.utils.common.crop(stack, (-1, new_size, new_size))
-    stack = np.ascontiguousarray(stack.T)
+    instack=read_mrc(input)
+    instack = np.ascontiguousarray(instack.T)
+    default_logger.debug(f'instack of size {instack.shape}')
+    default_logger.debug(f'Cropping from size {instack.shape[1]}x{instack.shape[2]} to size {new_size}x{new_size}')
+    instack =  aspire.utils.common.crop(instack, (-1, new_size, new_size))
+    instack = np.ascontiguousarray(instack.T)
     default_logger.info(f'Saving MRC file {output}')
-    write_mrc(output, stack)
+    write_mrc(output, instack)
     default_logger.debug('Done crop')
 
     return
@@ -118,14 +117,16 @@ def downsample_cmd(ctx, input, output, new_size):
 
     default_logger.debug('Starting downsample')
     default_logger.debug(f'Reading MRC file {input}')
-    stack=read_mrc(input)
-    stack = np.ascontiguousarray(stack.T)
-    default_logger.debug(f'stack of size {stack.shape}')
-    default_logger.debug(f'Downsampling from size {stack.shape[1]}x{stack.shape[2]} to size {new_size}x{new_size}')
-    stack = aspire.preprocessor.downsample.downsample(stack, new_size, stack_in_fourier=False,  verbose=ctx.obj['VERBOSITY'])
-    stack = np.ascontiguousarray(stack.T)
+    mrc_stack=read_mrc(input)
+    mrc_stack = np.ascontiguousarray(mrc_stack.T)
+    default_logger.debug(f'mrc_stack of size {mrc_stack.shape}')
+    default_logger.debug(f'Downsampling from size {mrc_stack.shape[1]}x{mrc_stack.shape[2]} '
+                         f'to size {new_size}x{new_size}')
+    mrc_stack = aspire.preprocessor.downsample.downsample(mrc_stack, new_size,
+                                                          stack_in_fourier=False,  verbose=ctx.obj['VERBOSITY'])
+    mrc_stack = np.ascontiguousarray(mrc_stack.T)
     default_logger.info(f'Saving MRC file {output}')
-    write_mrc(output, stack)
+    write_mrc(output, mrc_stack)
     default_logger.debug('Done downsample')
 
     return
@@ -135,8 +136,7 @@ def downsample_cmd(ctx, input, output, new_size):
 @click.option('-i', '--input', type=click.Path(exists=True),  help='Input stack name.')
 @click.option('-o', '--output', type=click.Path(exists=False),  help='Output stack name.')
 @click.option('--radius', type=int, required=True, help='Radius of particle (in pixels).')
-@click.pass_context
-def normalize_cmd(ctx, input, output, radius):
+def normalize_cmd(input, output, radius):
     """\b
         Normalize the background of each image to mean 0 and std 1.
         The mean and std of each image in the stack are estimated using pixels
@@ -164,8 +164,7 @@ def normalize_cmd(ctx, input, output, radius):
 
 @stack_cmds.command('estimate-snr', short_help='Estimate SNR (signal-to-noise ratio) of a stack.')
 @click.option('-i', '--input', type=click.Path(exists=True),  help='Input stack name.')
-@click.pass_context
-def estimate_snr_cmd(ctx, input):
+def estimate_snr_cmd(input):
     """\b
         Estimate SNR (signal-to-noise ratio) of a stack of images. For images of size pxp,
         all pixels outside radius p/2 are considered noise pixels, and all pixels inside
@@ -211,8 +210,7 @@ def prewhiten_cmd(ctx, input, output):
 @click.option('-i', '--input', type=click.Path(exists=True),  help='Input stack name.')
 @click.option('-o', '--output', type=click.Path(exists=False),  help='Output stack name.')
 @click.option('--force', is_flag=True, default=False, help='Force contrast flipping.', show_default=True)
-@click.pass_context
-def globalflip_cmd(ctx, input, output, force):
+def globalflip_cmd(input, output, force):
     """\b
         Check if all images in a stack should be globally phase flipped so that
         the molecule corresponds brighter pixels and the background corresponds
@@ -223,24 +221,24 @@ def globalflip_cmd(ctx, input, output, force):
 
     default_logger.debug('Starting global flipping')
     default_logger.debug(f'Reading MRC file {input}')
-    stack=read_mrc(input)
+    mrc_stack=read_mrc(input)
 
-    # No need to transpose the stack as in the other functions, as the last dimension already
+    # No need to transpose the mrc_stack as in the other functions, as the last dimension already
     # corresponds to the slice number.
 
-    default_logger.debug(f'stack of size {stack.shape}')
-    stack, flipped = aspire.preprocessor.global_phaseflip.global_phaseflip(stack, force)
+    default_logger.debug(f'mrc_stack of size {mrc_stack.shape}')
+    mrc_stack, flipped = aspire.preprocessor.global_phaseflip.global_phaseflip(mrc_stack, force)
 
-    default_logger.info(f'stack flipped = {flipped}')
+    default_logger.info(f'mrc_stack flipped = {flipped}')
     default_logger.info(f'Saving MRC file {output}')
-    write_mrc(output, stack)
+    write_mrc(output, mrc_stack)
     default_logger.debug('Done global flipping')
 
     return
 
 
 @stack_cmds.command('preprocess', short_help='Standard preprocessing of a stack of images')
-@click.option('--star-file',type=click.Path(exists=True), required=True, help='STAR file with CTF data.')
+@click.option('--star-file', type=click.Path(exists=True), required=True, help='STAR file with CTF data.')
 @click.option('-o', '--output', type=click.Path(exists=False),  help='Output stack name.')
 @click.option('--pixA', 'pixA', type=float, default=None, help=',Pixel size in Angstroms (if missing from STAR file).',
               show_default=True)
@@ -298,7 +296,7 @@ def sort_stack_cmd(input, output, method, lowpass, highpass):
         idx = idx[::-1]
         c = c[idx, :]
     else:
-        c =stack.sort_by_bandpass(stack_data)
+        c =stack.sort_by_bandpass(stack_data, lowpass, highpass)
 
     np.savetxt(output, c, fmt='%07d    %e')
 
@@ -382,8 +380,8 @@ def classify_cmd(ctx, input, output, num_nbor, nn_avg, max_shift, subset_select,
     ordered_output = 'ordered_averages.mrcs' if subset_name is None else subset_name
 
     default_logger.info(f'Reading {input}')
-    stack = read_mrc(input)
-    averages, ordered_averages = class_averaging(stack, num_nbor, nn_avg, max_shift, subset_select,
+    instack = read_mrc(input)
+    averages, ordered_averages = class_averaging(instack, num_nbor, nn_avg, max_shift, subset_select,
                                                  verbose=ctx.obj['VERBOSITY'])
     write_mrc(output, averages)
     # write_mrc(ordered_output, ordered_averages)
@@ -407,15 +405,16 @@ def abinitio_cmd(ctx,input,output,symmetry,max_shift):
     """
 
     default_logger.info(f'Loading {input}')
-    stack = np.ascontiguousarray(read_mrc(input))
+    instack = np.ascontiguousarray(read_mrc(input))
 
 
-    symmetry_type=symmetry[0].upper() # First letter indicates the C/D/T/O/I
+    symmetry_type = symmetry[0].upper() # First letter indicates the C/D/T/O/I
+    volume=None # To avoid python style warning (referenced before assignment)
     if symmetry_type == 'C':
         n_symm = int(symmetry[1:])
 
         if n_symm == 1:
-            volume = cryo_abinitio_c1_worker(stack, 2, max_shift=max_shift,verbose=ctx.obj['VERBOSITY'])
+            volume = cryo_abinitio_c1_worker(instack, 2, max_shift=max_shift,verbose=ctx.obj['VERBOSITY'])
         elif n_symm ==2:
             raise NotImplementedError("C2 symmetry is not yet implemented")
         elif n_symm in [3,4]:
@@ -441,5 +440,6 @@ def abinitio_cmd(ctx,input,output,symmetry,max_shift):
         raise ValueError("Symmetry group must be C/D/T/O/I (e.g., C1, C7, D2, T, O, I)")
 
     write_mrc(output, volume)
+
 if __name__ == "__main__":
     cli()
