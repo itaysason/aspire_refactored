@@ -7,7 +7,7 @@ from aspire.class_averaging.cryo_select_subset import cryo_select_subset
 from aspire.common import *
 
 
-def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pick=5000, verbose = 0):
+def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pick=5000):
     default_logger.info('Step 1/4: Estimating SNR of images images')
     snr, signal, noise = common.estimate_snr(stack)
     default_logger.info(f'Signal power =  {signal:.4e}')
@@ -21,7 +21,7 @@ def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pi
 
     # initial classification fd update
     default_logger.info('Step 3/4: Initial classification (Finding nearest neighbors for each projection)')
-    classes, class_refl, rot, corr, _ = initial_classification_fd_update(spca_data, num_nbor, verbose = verbose)
+    classes, class_refl, rot, corr, _ = initial_classification_fd_update(spca_data, num_nbor)
     default_logger.info('Step 3/4: Finished initial classification')
 
     # VDM
@@ -33,11 +33,11 @@ def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pi
     use_em = True
     default_logger.info('Step 4/4: Averaging images with their {} nearest neighbors with maximum shift of {} pixels'.format(nn_avg, max_shift))
     shifts, corr, averages, norm_variance = align_main(stack, rot, classes, class_refl, spca_data, nn_avg, max_shift,
-                                                       list_recon, 'my_tmpdir', use_em, verbose)
+                                                       list_recon, 'my_tmpdir', use_em)
     default_logger.info('Step 4/4: Finished averaging')
 
     # Picking images for abinitio. I think it should be in abinitio or in a completely separate function
     # indices = cryo_smart_select_subset(classes, size_output, contrast_priority, to_image)
     print('Finding {} images with highest contrast'.format(n_images_to_pick))
-    ordered_averages = cryo_select_subset(averages, classes, n_images_to_pick)
-    return averages, ordered_averages
+    indices = cryo_select_subset(averages, classes, n_images_to_pick)
+    return averages, indices

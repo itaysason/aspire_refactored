@@ -9,13 +9,13 @@ from aspire.common import *
 import time
 
 
-def preprocess(star_file, pixel_size=None, crop_size=-1, downsample_size=89, verbose=0):
+def preprocess(star_file, pixel_size=None, crop_size=-1, downsample_size=89):
     use_crop = crop_size > 0
     use_downsample = downsample_size > 0
     # flag to indicate not to transform back in phaseflip and to to transform in downsample
     flag = use_downsample and not use_crop
     default_logger.info('Starting phaseflip')
-    stack = phaseflip_star_file(star_file, pixel_size, flag, verbose)
+    stack = phaseflip_star_file(star_file, pixel_size, flag)
     s = stack.shape
     default_logger.info('Finished phaseflip.')
     if use_crop:
@@ -29,7 +29,7 @@ def preprocess(star_file, pixel_size=None, crop_size=-1, downsample_size=89, ver
     if use_downsample > 0:
         default_logger.info('Start downsampling')
         tic = time.time()
-        stack = downsample(stack, downsample_size, flag, verbose)
+        stack = downsample(stack, downsample_size, mask=None, stack_in_fourier=flag)
         toc = time.time()
         default_logger.info(f'Finished downsampling from {crop_size}x{crop_size} to {downsample_size}x{downsample_size}')
     else:
@@ -42,7 +42,7 @@ def preprocess(star_file, pixel_size=None, crop_size=-1, downsample_size=89, ver
     default_logger.info('Start normalizing background')
     stack, _, _ = normalize_background(stack, stack.shape[1] * 45 // 100)
     default_logger.info('Start prewhitening')
-    stack = prewhiten(stack, verbose)
+    stack = prewhiten(stack)
     default_logger.info('Start global phaseflip')
     stack, _ = aspire.preprocessor.global_phaseflip.global_phaseflip(stack)
     return stack

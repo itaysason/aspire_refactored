@@ -36,9 +36,9 @@ def global_phaseflip(stack, forceflip=False):
     signal_mean = np.mean(signal_mean)
     noise_mean = np.mean(noise_mean)
 
-    flipped=False
+    flipped = False
     if (signal_mean < noise_mean) or forceflip:
-        flipped=True
+        flipped = True
         stack *= -1
 
     return stack, flipped

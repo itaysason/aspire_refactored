@@ -6,7 +6,7 @@ from tqdm import tqdm
 from aspire.common import *
 
 
-def initial_classification_fd_update(spca_data, n_nbor, is_rand=False, verbose = 0):
+def initial_classification_fd_update(spca_data, n_nbor, is_rand=False):
 
     # unpacking spca_data
     default_logger.debug('Starting initial_classification')
@@ -42,7 +42,8 @@ def initial_classification_fd_update(spca_data, n_nbor, is_rand=False, verbose =
             num_batches = int(np.ceil(1.0 * n_im / batch_size))
             classes = np.zeros((n_im, n_nbor), dtype='int')
 
-            pbar = tqdm(total=n_im, disable=(verbose != 1), desc="Finding nearest neighbors", leave=True)
+            pbar = tqdm(total=n_im, disable=(default_logger.getEffectiveLevel() != logging.INFO),
+                        desc="Finding nearest neighbors", leave=True)
             for i in range(num_batches):
                 start = i * batch_size
                 finish = min((i + 1) * batch_size, n_im)
@@ -50,13 +51,16 @@ def initial_classification_fd_update(spca_data, n_nbor, is_rand=False, verbose =
                 classes[start: finish] = np.argsort(-corr, axis=1)[:, 1: n_nbor + 1]
                 default_logger.debug('processed {}/{} images'.format(finish, n_im))
                 pbar.update(finish-start+1)
+
+            pbar.close()
         else:
             # TODO implement random nn
             batch_size = 2000
             num_batches = int(np.ceil(n_im / batch_size))
             classes = np.zeros((n_im, n_nbor), dtype='int')
 
-            pbar = tqdm(total=n_im, disable=(verbose != 1), desc="Finding nearest neighbors", leave=True)
+            pbar = tqdm(total=n_im, disable=(default_logger.getEffectiveLevel() != logging.INFO),
+                        desc="Finding nearest neighbors", leave=True)
             for i in range(num_batches):
                 start = i * batch_size
                 finish = min((i + 1) * batch_size, n_im)
@@ -64,6 +68,8 @@ def initial_classification_fd_update(spca_data, n_nbor, is_rand=False, verbose =
                 classes[start: finish] = np.argsort(-corr, axis=1)[:, 1: n_nbor + 1]
                 default_logger.debug('processed {}/{} images'.format(finish, n_im))
                 pbar.update(finish - start + 1)
+
+            pbar.close()
 
     classes = np.array(classes)
     max_freq = np.max(freqs)

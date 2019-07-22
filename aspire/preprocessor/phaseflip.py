@@ -12,13 +12,12 @@ from aspire.common import *
 import tempfile
 
 
-def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False, verbose=0):
+def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False):
     """
 
     :param star_file:
     :param pixel_size:
     :param return_in_fourier: To save computation can skip the ifft.
-    :param verbose: Verbosity level (0: silent, 1: progress, 2: debug).
     :return:
     """
 
@@ -57,7 +56,8 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False, ver
     a, b, c = precompute_cryo_CTF_Relion_fast(resolution, r=False)
 
     default_logger.debug(f'Processing total of {num_projections}')
-    pbar=tqdm(total=num_projections, disable=(verbose != 1), desc="Phaseflipping", leave=True)
+    pbar=tqdm(total=num_projections, disable=(default_logger.getEffectiveLevel() != logging.INFO),
+              desc="Phaseflipping", leave=True)
     num_finished = 0
     for stack_name in stack_info:
         mrc_path = os.path.join(dir_path, stack_name)
@@ -99,6 +99,8 @@ def phaseflip_star_file(star_file, pixel_size=None, return_in_fourier=False, ver
             # pfim2 = irfft2(imhat2)
             num_finished += 1
             pbar.update(1)
+
+    pbar.close()
 
     return projections
 

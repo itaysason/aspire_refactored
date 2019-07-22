@@ -2,12 +2,11 @@ import numpy as np
 import scipy.sparse.linalg as spsl
 from aspire.common import default_logger
 
-def cryo_sync_rotations(s, rots_ref=None, verbose=0):
+def cryo_sync_rotations(s, rots_ref=None):
     """
     3e-14 err from matlab
     :param s:
     :param rots_ref:
-    :param verbose:
     :return:
     """
     tol = 1e-14

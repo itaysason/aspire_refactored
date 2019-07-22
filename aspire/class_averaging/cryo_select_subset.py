@@ -28,7 +28,7 @@ def cryo_select_subset(images, classes, size_output, to_image=None, n_skip=None)
             mask[classes[priority[curr_image_idx], :n_skip]] = 1
             curr_image_idx += 1
     indices = np.array(selected, dtype='int')[:min(size_output, len(selected))]
-    return images[:, :, indices]
+    return indices
 
 
 def cryo_smart_select_subset(classes, size_output, priority=None, to_image=None):

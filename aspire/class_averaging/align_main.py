@@ -5,7 +5,7 @@ from tqdm import tqdm
 from aspire.common import *
 
 
-def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_recon, tmpdir, use_em, verbose):
+def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_recon, tmpdir, use_em):
     data = data.swapaxes(0, 2)
     data = data.swapaxes(1, 2)
     data = np.ascontiguousarray(data)
@@ -75,7 +75,8 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
     dot_time = 0
     rest_time = 0
 
-    pbar = tqdm(total=len(list_recon), disable=(verbose != 1), desc="Computing averages", leave=True)
+    pbar = tqdm(total=len(list_recon), disable=(default_logger.getEffectiveLevel() != logging.INFO),
+                desc="Computing averages", leave=True)
     for j in range(len(list_recon)):
         default_logger.debug('Averaging image {} out of {}'.format(j, len(list_recon)))
         angle_j[1:] = angle[list_recon[j], :k]
@@ -147,6 +148,8 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
         rest_time += tic6 - tic5
 
         pbar.update(1)
+
+    pbar.close()
 
     default_logger.debug(f'Timeings:')
     default_logger.debug(f'\tRotating images (rotate_time) {rotate_time:.2f} sec')

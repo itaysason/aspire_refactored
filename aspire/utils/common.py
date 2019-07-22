@@ -156,6 +156,20 @@ def cryo_pft(p, n_r, n_theta):
     return pf, freqs
 
 
+def cryo_pft_pystyle(projs, n_r, n_theta):
+    """
+    A wrapper function for cryo_pft which expects and returns arrays in python style (i.e. image index is the first)
+    :param projs: an array size m-by-npixelsx-by-npixels of m images
+    :param n_r: the required radial resolution
+    :param n_theta: the required angular resoulution
+    :return: an m-by-n_theta-by-nr array of Fourier transformed projection images
+    """
+    projs = np.transpose(projs, axes=(1, 2, 0))
+    npf, freqs = cryo_pft(projs, n_r, n_theta)
+    npf = np.transpose(npf, axes=(2, 1, 0))
+    return npf, freqs
+
+
 def fuzzy_mask(n, r0, origin=None):
     if isinstance(n, int):
         n = np.array([n])

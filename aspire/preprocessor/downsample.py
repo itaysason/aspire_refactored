@@ -4,8 +4,10 @@ from pyfftw.interfaces.numpy_fft import fft2, ifft2
 from tqdm import tqdm
 from aspire.common import *
 import warnings
+import scipy.io
 
-def downsample(stack, n, mask=None, stack_in_fourier=False,  verbose=0):
+
+def downsample(stack, n, mask=None, stack_in_fourier=False):
     """ Use Fourier methods to change the sample interval and/or aspect ratio
         of any dimensions of the input image 'img'. If the optional argument
         stack is set to True, then the *first* dimension of 'img' is interpreted as the index of
@@ -22,8 +24,6 @@ def downsample(stack, n, mask=None, stack_in_fourier=False,  verbose=0):
         The size of the mask must be the size of output. The optional fx output
         argument is the padded or cropped, masked, FT of in, with zero
         frequency at the origin.
-
-         :param verbose: Verbosity level (0: silent, 1: progress, 2: debug).
     """
 
     default_logger.debug(f'Input stack of size {stack.shape}')
@@ -38,7 +38,8 @@ def downsample(stack, n, mask=None, stack_in_fourier=False,  verbose=0):
     images_batches = np.array_split(np.arange(num_images), 500)
     default_logger.debug(f'Using {len(images_batches)} batches of size {stack[images_batches[0]].shape}')
 
-    pbar = tqdm(total=num_images, disable=(verbose != 1), desc="Downsampling", leave=True)
+    pbar = tqdm(total=num_images, disable=(default_logger.getEffectiveLevel() != logging.INFO),
+                desc="Downsampling", leave=True)
     for batch in images_batches:
         curr_batch = np.array(stack[batch])
         curr_batch = curr_batch if stack_in_fourier else fft2(curr_batch)
@@ -55,4 +56,7 @@ def downsample(stack, n, mask=None, stack_in_fourier=False,  verbose=0):
 
         default_logger.debug(f'Processed {batch[-1] + 1}/{num_images} images')
         pbar.update(curr_batch.shape[0])
+
+    pbar.close()
+
     return output

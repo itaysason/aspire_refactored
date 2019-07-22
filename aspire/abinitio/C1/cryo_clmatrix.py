@@ -1,8 +1,9 @@
 import numpy as np
 import scipy.sparse as sps
 import time
-from aspire.common import default_logger
+from aspire.common import *
 from tqdm import tqdm
+
 
 def cryo_clmatrix_cpu_ref(pf, nk=None, verbose=1, max_shift=15, shift_step=1, map_filter_radius=0, ref_clmatrix=0, ref_shifts_2d=0):
     n_projs = pf.shape[2]
@@ -166,7 +167,7 @@ def cryo_clmatrix_cpu_ref(pf, nk=None, verbose=1, max_shift=15, shift_step=1, ma
     return clstack, corrstack, shift_equations, shift_equations_map, clstack_mask
 
 
-def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1, verbose = 0):
+def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1):
     n_projs = pf.shape[2]
     n_shifts = int(np.ceil(2 * max_shift / shift_step + 1))
     n_theta = pf.shape[1]
@@ -216,7 +217,7 @@ def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1, verbose = 0):
         all_shift_phases[i] = np.exp(-2 * np.pi * 1j * rk2 * shift / (2 * r_max + 1))
 
     stack_p2_shifted_flipped = np.zeros((r_max, n_shifts * n_theta), pf3.dtype)
-    pbar=tqdm(total=int(n_projs*(n_projs-1)/2), disable=(verbose != 1), desc="Processed image pairs", leave=True)
+    pbar=tqdm(total=int(n_projs*(n_projs-1)/2), disable=(default_logger.getEffectiveLevel() != logging.INFO), desc="Processed image pairs", leave=True)
     default_logger.debug(f"Compute correlation between pairs of images")
     for j in range(n_projs - 1, 0, -1):
         p2_flipped = np.conj(pf3[j])
@@ -254,6 +255,8 @@ def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1, verbose = 0):
                                  f"corr={corrstack[i, j]:4.3f}, time={toc-tic:5.4f} sec")
             pbar.update(1)
 
+    pbar.close()
+
     for i in range(n_projs):
         for j in range(i + 1, n_projs):
 
@@ -288,3 +291,19 @@ def cryo_clmatrix_cpu(pf, nk=None, max_shift=15, shift_step=1, verbose = 0):
     shift_equations = sps.csr_matrix((shift_eq, (shift_i, shift_j)), shape=(shift_equation_idx, 2 * n_projs + 1))
 
     return clstack, corrstack, shift_equations, shift_equations_map, clstack_mask
+
+
+def cryo_clmatrix_cpu_pystyle(npf, max_shift, shift_step):
+    """
+    A wrapper function for cryo_clmatrix_cpu which expects and returns arrays in python style
+    (i.e. image index is the first)
+    :param npf: an m-by-n_theta-by-nr array of Fourier transformed projection images
+    :param max_shift: the maximum 2d shift to apply
+    :param shift_step:
+    :return:
+    """
+    n_images = len(npf)
+    max_shift_1d = np.ceil(2 * np.sqrt(2) * max_shift)
+    npf = np.transpose(npf, axes=(2, 1, 0))
+    return cryo_clmatrix_cpu(npf, n_images, max_shift_1d, shift_step)
+    # return cryo_clmatrix_cpu(npf, n_images, param, max_shift_1d, shift_step)

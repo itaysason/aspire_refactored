@@ -2,7 +2,7 @@ import numpy as np
 import scipy.sparse as sps
 
 
-def cryo_estimate_shifts(pf, rotations, max_shift, shift_step=1, memory_factor=10000, shifts_2d_ref=None, verbose=0):
+def cryo_estimate_shifts(pf, rotations, max_shift, shift_step=1, memory_factor=10000, shifts_2d_ref=None):
     if memory_factor < 0 or (memory_factor > 1 and memory_factor < 100):
         raise ValueError('subsamplingfactor must be between 0 and 1 or larger than 100')
 
@@ -133,9 +133,6 @@ def cryo_estimate_shifts(pf, rotations, max_shift, shift_step=1, memory_factor=1
     est_shifts = est_shifts.reshape((2, n_projs), order='F')
 
     if shifts_2d_ref is not None:
-        raise NotImplementedError
-
-    if verbose != 0:
         raise NotImplementedError
 
     return est_shifts, shift_equations

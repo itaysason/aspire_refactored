@@ -5,17 +5,17 @@ import aspire.utils.common as common
 from aspire.common import *
 import stack
 
-def prewhiten(stack, verbose=0):
+def prewhiten(stack):
     default_logger.debug('Starting prewhiten')
 
-    noise_response, _, _ = cryo_noise_estimation(stack, None, verbose)
-    output_images, _, _ = cryo_prewhiten(stack, noise_response, None, verbose)
+    noise_response, _, _ = cryo_noise_estimation(stack, None)
+    output_images, _, _ = cryo_prewhiten(stack, noise_response, None)
     default_logger.debug('Done prewhiten')
 
     return output_images
 
 
-def cryo_noise_estimation(projections, radius_of_mask=None, verbose=0):
+def cryo_noise_estimation(projections, radius_of_mask=None):
 
     default_logger.debug('Starting noise_estimation')
     default_logger.debug(f'radius_of_mask={radius_of_mask}')
@@ -30,7 +30,7 @@ def cryo_noise_estimation(projections, radius_of_mask=None, verbose=0):
     center_polar_samples = stack.cart2rad(p)
     noise_idx = np.where(center_polar_samples >= radius_of_mask)
 
-    power_spectrum, r, r2, x = cryo_epsds(projections, noise_idx, p // 3, verbose)
+    power_spectrum, r, r2, x = cryo_epsds(projections, noise_idx, p // 3)
     power_spectrum = np.real(power_spectrum)
 
     default_logger.debug('Done noise_estimation')
@@ -38,7 +38,7 @@ def cryo_noise_estimation(projections, radius_of_mask=None, verbose=0):
     return power_spectrum, r, r2
 
 
-def cryo_prewhiten(proj, noise_response, rel_threshold=None, verbose=0):
+def cryo_prewhiten(proj, noise_response, rel_threshold=None):
     """
     Pre-whiten a stack of projections using the power spectrum of the noise.
 
@@ -94,7 +94,8 @@ def cryo_prewhiten(proj, noise_response, rel_threshold=None, verbose=0):
     p2 = np.zeros((num_images, resolution, resolution), dtype='complex128')
     proj = proj.transpose((2, 0, 1)).copy()
 
-    pbar = tqdm(total=num_images, disable=(verbose != 1), desc="Apply whitening filter", leave=True)
+    pbar = tqdm(total=num_images, disable=(default_logger.getEffectiveLevel() != logging.INFO),
+                desc="Apply whitening filter", leave=True)
     for i in range(num_images):
         pp[start_idx:end_idx, start_idx:end_idx] = proj[i]
 
@@ -107,6 +108,8 @@ def cryo_prewhiten(proj, noise_response, rel_threshold=None, verbose=0):
 
         pbar.update(1)
 
+    pbar.close()
+
     # change back to x,y,z convention
     proj = p2.real.transpose((1, 2, 0)).copy()
 
@@ -114,7 +117,7 @@ def cryo_prewhiten(proj, noise_response, rel_threshold=None, verbose=0):
     return proj, filter_var, nzidx
 
 
-def cryo_epsds(imstack, samples_idx, max_d, verbose=0):
+def cryo_epsds(imstack, samples_idx, max_d):
 
     default_logger.debug('Starting cryo_epsds')
 
@@ -123,7 +126,7 @@ def cryo_epsds(imstack, samples_idx, max_d, verbose=0):
         max_d = p-1
         default_logger.warning('max_d too large. Setting max_d to {}'.format(max_d))
 
-    r, x, _ = cryo_epsdr(imstack, samples_idx, max_d, verbose)
+    r, x, _ = cryo_epsdr(imstack, samples_idx, max_d)
 
     r2 = np.zeros((2 * p - 1, 2 * p - 1))
     dsquare = np.square(x)
@@ -139,13 +142,16 @@ def cryo_epsds(imstack, samples_idx, max_d, verbose=0):
 
     p2 = p2.real
 
-    pbar = tqdm(total=imstack.shape[2], disable=(verbose != 1),  desc="Normalize PSD", leave=True)
+    pbar = tqdm(total=imstack.shape[2], disable=(default_logger.getEffectiveLevel() != logging.INFO),
+                desc="Normalize PSD", leave=True)
     e = 0
     for i in range(imstack.shape[2]):
         im = imstack[:, :, i]
         e += np.sum(np.square(im[samples_idx] - np.mean(im[samples_idx])))
         default_logger.debug(f'Processed {i} /{imstack.shape[2]} images')
         pbar.update(1)
+
+    pbar.close()
 
     mean_e = e / (len(samples_idx[0]) * imstack.shape[2])
     p2 = (p2 / p2.sum()) * mean_e * p2.size
@@ -157,7 +163,7 @@ def cryo_epsds(imstack, samples_idx, max_d, verbose=0):
     return p2, r, r2, x
 
 
-def cryo_epsdr(vol, samples_idx, max_d, verbose=0):
+def cryo_epsdr(vol, samples_idx, max_d):
 
     default_logger.debug('Starting cryo_epsdr')
 
@@ -205,7 +211,8 @@ def cryo_epsdr(vol, samples_idx, max_d, verbose=0):
     sum_s = np.zeros(output_ifft2.shape, output_ifft2.dtype)
     sum_c = c * vol.shape[0]
 
-    pbar = tqdm(total=k, disable=(verbose != 1), desc="Computing radial PSD", leave=True)
+    pbar = tqdm(total=k, disable=(default_logger.getEffectiveLevel() != logging.INFO),
+                desc="Computing radial PSD", leave=True)
     for i in range(k):
 
         proj = vol[i]
@@ -217,6 +224,8 @@ def cryo_epsdr(vol, samples_idx, max_d, verbose=0):
         sum_s += output_ifft2
         default_logger.debug(f'Processed {i} /{k} images')
         pbar.update(1)
+
+    pbar.close()
 
     for curr_dist in zip(valid_dists[0], valid_dists[1]):
         dmidx = dist_map[curr_dist]

@@ -5,14 +5,13 @@ import logging
 # Define message formatter
 class AspireLogFormatter(logging.Formatter):
 
-    dbg_fmt  = "[%(asctime)-15s][%(filename)s:%(lineno)03d][%(levelname)-5s] %(message)s"
+    dbg_fmt = "[%(asctime)-15s][%(filename)s:%(lineno)03d]%(message)s"
     info_fmt = "[%(asctime)-15s] %(message)s"
 
     def __init__(self):
-        super().__init__(fmt="%(levelno)d: %(msg)s", datefmt=None, style='%')
+        super().__init__(fmt="%(levelno)d: %(msg)s", datefmt="%Y-%m-%d %H:%M:%S", style='%')
 
     def format(self, record):
-
         # Save the original format configured by the user
         # when the logger formatter was instantiated
         format_orig = self._style._fmt
@@ -41,7 +40,7 @@ def configure_logger(logger, logfile, verbosity):
     Configure the logger according to these parameters.
     """
 
-    date_format = "%y-%m-%d %H:%M:%S"
+    logger.handlers = []    # Remove current logger handlers.
 
     if verbosity == 0:
         logger.propagte = False
@@ -50,26 +49,23 @@ def configure_logger(logger, logfile, verbosity):
     elif verbosity == 2:
         logger.setLevel(logging.DEBUG)
 
-    fmt = AspireLogFormatter()
+    logging_format = AspireLogFormatter()
     if logfile is not None:
         lh = logging.FileHandler(logfile)
-        lh.setFormatter(fmt)
+        lh.setFormatter(logging_format)
         logger.addHandler(lh)
 
     lh = logging.StreamHandler(sys.stdout)
-    lh.setFormatter((fmt))
+    lh.setFormatter(logging_format)
     logger.addHandler(lh)
 
 
-# Define default logger
-logger = logging.getLogger(__name__)
+# Define default logger. Can be overridden by configure_logger.
+# Use stdout for output, at INFO level, with aspire message format
+default_logger = logging.getLogger(__name__)
 stdout_handler = logging.StreamHandler()
 
 fmt = AspireLogFormatter()
 stdout_handler.setFormatter(fmt)
-logger.addHandler(stdout_handler)
-logger.setLevel(logging.INFO)
-
-
-# Define default logger.
-default_logger = logging.getLogger()
+default_logger.addHandler(stdout_handler)
+default_logger.setLevel(logging.INFO)
