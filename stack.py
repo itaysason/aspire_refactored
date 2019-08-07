@@ -1,9 +1,7 @@
-import mrcfile
 import numpy as np
 from aspire.common import default_logger
-from aspire.utils.common  import cfft2
-from aspire.utils.common  import cfft2
-import scipy.io
+from aspire.utils.common import cfft2
+
 
 def contrast(instack, radius=None):
     """
@@ -39,8 +37,8 @@ def contrast(instack, radius=None):
 
     for k in range(instack.shape[0]):
         p = instack[k, :, :]
-        c[k,0] = k  # Index of the image
-        c[k,1] = np.std(p[idx],ddof=1) # contrast of the image
+        c[k, 0] = k     # Index of the image
+        c[k, 1] = np.std(p[idx], ddof=1)    # contrast of the image
 
     return c
 
@@ -70,7 +68,7 @@ def image_grid(n):
     return x, y
 
 
-def sort_by_bandpass(projs, lc = 0.05, hc = 0.2):
+def sort_by_bandpass(projs, lc=0.05, hc=0.2):
     """ Sort images by their energy in a band of frequencies. Return
         the indices of the projections sorted by their energy in a 
         band of frequencies between lc (low cutoff) and hc (high cutoff).
@@ -89,12 +87,12 @@ def sort_by_bandpass(projs, lc = 0.05, hc = 0.2):
     if projs.ndim != 3:
         raise ValueError(f"Input stack must be KxLxL stack but given {projs.shape}")
 
-    # To convert a Python stack to matlab used permute(projs,[2 3 1]) or prohjs.T in Python
-    fp = cfft2((projs))
-    l = (projs.shape[1] - 1) / 2
+    # To convert a Python stack to matlab used permute(projs,[2 3 1]) or projs.T in Python
+    fp = cfft2(projs)
+    im_side = (projs.shape[1] - 1) / 2
     x, y = image_grid(projs.shape[1])
-    idx1 = np.where(np.multiply(x, x) + np.multiply(y, y) < (l * lc) ** 2)
-    idx2 = np.where(np.multiply(x, x) + np.multiply(y, y) > (l * hc) ** 2)
+    idx1 = np.where(np.multiply(x, x) + np.multiply(y, y) < (im_side * lc) ** 2)
+    idx2 = np.where(np.multiply(x, x) + np.multiply(y, y) > (im_side * hc) ** 2)
 
     vals = np.zeros((fp.shape[0], 1), np.float64)
     for k in range(vals.size):
@@ -106,16 +104,15 @@ def sort_by_bandpass(projs, lc = 0.05, hc = 0.2):
             img[idx1] = 0
             v = np.sum(np.power(np.abs(img), 2))
         else:
-            v=-1
+            v = -1
 
-        vals[k]=v
+        vals[k] = v
 
-    idx = vals[:,0].argsort() # Find the indices that sort vals in ascending order
-    idx = idx[::-1] # Flip the indices to descending order
-    vals_sorted = vals[idx, :] # Sort vals in descending order
+    idx = vals[:, 0].argsort()  # Find the indices that sort vals in ascending order
+    idx = idx[:: -1]    # Flip the indices to descending order
+    vals_sorted = vals[idx, :]  # Sort vals in descending order
 
     c = np.zeros((projs.shape[0], 2), projs.dtype)
-    c[:,0]=idx
-    c[:,1]=vals_sorted.flatten()
+    c[:, 0] = idx
+    c[:, 1] = vals_sorted.flatten()
     return c
-

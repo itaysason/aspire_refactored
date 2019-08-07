@@ -318,30 +318,45 @@ def select_cmd(instack_name, outstack_name, index_file, max_images, start_from, 
             Use # to insert comments to the index file.
 
         """
-
-    # Read indices of images to select
-    default_logger.debug(f"Read index file {index_file}")
-    index_info = np.loadtxt(index_file)
-    if index_info.ndim > 1:
-        default_logger.debug(f"Index file has {index_info.shape[0]} rows {index_info.shape[1]} columns")
-        index_info = index_info[:, 0]
-    else:
-        default_logger.debug(f"Index file has {index_info.shape[0]} rows")
-        index_info = index_info.reshape(index_info.shape[0], 1)
-
-    if max_images is None:
-        max_images = index_info.shape[0] + 1
-
-    n = np.minimum(index_info.shape[0], max_images*step)
-    default_logger.debug(f"Selecting from image {start_from} to image {n} in steps of {step}")
-    idx = index_info[start_from:n:step]
-    idx = idx.astype(np.int64)
-
     # Read input stack
     default_logger.info(f"Reading MRC file {instack_name}")
     stack_data = read_mrc(instack_name)
     stack_data = stack_data.T
-    default_logger.info(f"Selecting images {n} from MRC file")
+    n_projs = stack_data.shape[0]   # Number of images in the stack
+    default_logger.debug(f"MRC file {instack_name} has {n_projs} images")
+
+    # Read indices of images to select
+    if index_file is not None:
+        default_logger.debug(f"Read index file {index_file}")
+        index_info = np.loadtxt(index_file)
+        if index_info.ndim > 1:
+            default_logger.debug(f"Index file has {index_info.shape[0]} rows {index_info.shape[1]} columns")
+            index_info = index_info[:, 0]
+        else:
+            default_logger.debug(f"Index file has {index_info.shape[0]} rows")
+            index_info = index_info.reshape(index_info.shape[0], 1)
+    else:
+        # Index file not given. Using images as ordered in the input stack.
+        index_info = np.arange(n_projs)
+        default_logger.debug(f"No index file given.")
+
+
+    if max_images is None:
+        # max_images not given. Set max_images to the number of images in the stack.
+        last_selected_image = n_projs
+    else:
+        # max_images is given, so the last index of the image to be selected is
+        last_selected_image = max_images*step + start_from
+
+    n = np.minimum(index_info.shape[0], last_selected_image)
+
+    if n > n_projs:
+        raise ValueError(f"Trying to select {n} images but stack has only {n_projs} images.")
+
+    default_logger.info(f"Selecting from image {start_from} to image {n} in steps of {step}")
+    idx = index_info[start_from:n:step]
+    idx = idx.astype(np.int64)
+
     stack_data = stack_data[idx.flatten(), :, :]  # XXX Remove once we change all stack to python convention
     # flatten is required to convert an Nx1 matrix into a 1D array. Otherwise stack_data
     # becomes 4D.
@@ -361,7 +376,8 @@ def select_cmd(instack_name, outstack_name, index_file, max_images, start_from, 
 @click.option("--nn_avg", default=50, help="Number of images to average into each class. (default=50)")
 @click.option("--max-shift", default=15, help="Max shift of projections from the center. (default=15)")
 @click.option("--subset-select", default=5000, help="Number of images to pick for abinitio. (default=5000)")
-@click.option("--subset-indices", default=None, help="Name of index file for top images.")
+@click.option("--subset-indices", default=None, type=click.Path(exists=False), required=True,
+              help="Name of index file for top images.")
 def classify_cmd(instack_name, outstack_name, num_nbor, nn_avg, max_shift, subset_select, subset_indices):
     """ \b
         Denoise a stack of images.
@@ -437,7 +453,7 @@ def abinitio_cmd(instack_name, map_name, symmetry, n_r, n_theta, max_shift, shif
         # as percentage of image size to pixels, for use with Cn functions.
 
         if n_symm == 1:
-            volume = cryo_abinitio_c1_worker(instack, 2, max_shift=max_shift_for_cn)
+            volume = cryo_abinitio_c1_worker(instack, 2, max_shift=max_shift)
         elif n_symm == 2:
             instack = np.transpose(instack, axes=(2, 0, 1))  # transpose to get python style arrays
             rots, volume = abinitio_c2(instack, n_r, n_theta, max_shift_for_cn, shift_step)
