@@ -12,7 +12,7 @@ def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pi
     snr, signal, noise = common.estimate_snr(stack)
     default_logger.info(f'Signal power =  {signal:.4e}')
     default_logger.info(f'Noise power = {noise:.4e}')
-    default_logger.info(f'Estimated SNR = 1/{round(1.0/snr)} (more precisely {snr:.4e})')
+    default_logger.info(f'Estimated SNR = 1/{int(round(1.0/snr)):d} (more precisely {snr:.4e})')
 
     # spca data
     default_logger.info('Step 2/4: Computing steerable PCA')
