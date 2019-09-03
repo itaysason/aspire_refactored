@@ -1,10 +1,10 @@
 import numpy as np
-from aspire.preprocessor.phaseflip import phaseflip_star_file
-from aspire.preprocessor.downsample import downsample
-from aspire.preprocessor.normalize_background import normalize_background
-from aspire.preprocessor.prewhiten import prewhiten
-from aspire.preprocessor.global_phaseflip import global_phaseflip
-import aspire.utils.common as common
+from aspire.aspire.preprocessor.phaseflip import phaseflip_star_file
+from aspire.aspire.preprocessor.downsample import downsample
+from aspire.aspire.preprocessor.normalize_background import normalize_background
+from aspire.aspire.preprocessor.prewhiten import prewhiten
+from aspire.aspire.preprocessor.global_phaseflip import global_phaseflip
+import aspire.aspire.utils.common as common
 import time
 
 

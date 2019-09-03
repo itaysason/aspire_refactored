@@ -1,4 +1,4 @@
-import aspire.utils.common as common
+import aspire.aspire.utils.common as common
 import numpy as np
 from pyfftw.interfaces.numpy_fft import fft2, ifft2
 

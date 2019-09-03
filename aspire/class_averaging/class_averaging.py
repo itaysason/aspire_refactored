@@ -1,9 +1,9 @@
 import numpy as np
-import aspire.utils.common as common
-from aspire.class_averaging.compute_spca import compute_spca
-from aspire.class_averaging.initial_classification import initial_classification_fd_update
-from aspire.class_averaging.align_main import align_main
-from aspire.class_averaging.cryo_select_subset import cryo_select_subset
+import aspire.aspire.utils.common as common
+from aspire.aspire.class_averaging.compute_spca import compute_spca
+from aspire.aspire.class_averaging.initial_classification import initial_classification_fd_update
+from aspire.aspire.class_averaging.align_main import align_main
+from aspire.aspire.class_averaging.cryo_select_subset import cryo_select_subset
 import time
 
 
