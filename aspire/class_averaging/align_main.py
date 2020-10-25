@@ -1,9 +1,10 @@
 import numpy as np
 import aspire.utils.common as common
 import pyfftw
+from aspire.class_averaging.em_classavg.em import EM
 
 
-def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_recon, tmpdir, use_em):
+def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_recon, use_em, tmpdir):
     data = data.swapaxes(0, 2)
     data = data.swapaxes(1, 2)
     data = np.ascontiguousarray(data)
@@ -72,6 +73,7 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
     multiply_time = 0
     dot_time = 0
     rest_time = 0
+    em_time = 0
     for j in range(len(list_recon)):
         print('averaging image {} out of {}'.format(j, len(list_recon)))
         angle_j[1:] = angle[list_recon[j], :k]
@@ -129,12 +131,25 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
         shifts[j] = -shifts_list[ind, 0] - 1j * shifts_list[ind, 1]
         tic6 = time.time()
 
+        if use_em:
+            n_iters = 3
+            ang_jump = 5
+            max_shift = 6
+            shift_jump = 2
+            n_scales = 10
+            remove_outliers = True
+            em = EM(images2, output[j], n_iters, ang_jump=ang_jump, max_shift=max_shift, shift_jump=shift_jump,
+                    n_scales=n_scales, is_remove_outliers=remove_outliers)
+            em_avg_est, _ = em.do_em()
+        tic7 = time.time()
+
         rotate_time += tic1 - tic0
         mult_time += tic2 - tic1
         cfft_time += tic3 - tic2
         multiply_time += tic4 - tic3
         dot_time += tic5 - tic4
         rest_time += tic6 - tic5
+        em_time += tic7 - tic6
 
     print(rotate_time)
     print(mult_time)
@@ -142,6 +157,8 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
     print(multiply_time)
     print(dot_time)
     print(rest_time)
+    if use_em:
+        print(em_time)
     output = output.swapaxes(1, 2)
     output = output.swapaxes(0, 2)
     output = np.ascontiguousarray(output)
