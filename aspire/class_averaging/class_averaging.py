@@ -20,7 +20,7 @@ def class_averaging(stack, num_nbor=100, nn_avg=50, max_shift=15, n_images_to_pi
     print('Finished computing steerable PCA in {} seconds'.format(toc - tic))
 
     # initial classification fd update
-    print('Finding {} nearest neighbors')
+    print('Finding {} nearest neighbors per image'.format(num_nbor))
     tic = time.time()
     classes, class_refl, rot, corr, _ = initial_classification_fd_update(spca_data, num_nbor)
     toc = time.time()

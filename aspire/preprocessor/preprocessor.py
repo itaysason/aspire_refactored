@@ -13,6 +13,7 @@ def preprocess(star_file, pixel_size=None, crop_size=-1, downsample_size=89):
     use_downsample = downsample_size > 0
     # flag to indicate not to transform back in phaseflip and to to transform in downsample
     flag = use_downsample and not use_crop
+    flag = False
     print('Starting phaseflip')
     tic = time.time()
     stack = phaseflip_star_file(star_file, pixel_size, flag)

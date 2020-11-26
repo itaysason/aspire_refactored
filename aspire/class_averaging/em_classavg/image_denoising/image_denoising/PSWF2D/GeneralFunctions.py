@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.polynomial.legendre import leggauss
 from scipy.special import jn
-from aspire.em_classavg.image_denoising.image_denoising.PSWF2D.BN.BN import BN
+from aspire.class_averaging.em_classavg.image_denoising.image_denoising.PSWF2D.BN.BN import BN
 import time
 
 

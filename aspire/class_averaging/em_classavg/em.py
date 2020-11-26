@@ -10,6 +10,7 @@ import progressbar
 
 import aspire.class_averaging.em_classavg.config as config
 import aspire.class_averaging.em_classavg.data_utils as data_utils
+import aspire.utils.common as common
 from aspire.class_averaging.em_classavg.image_denoising.image_denoising.ConverterModel.Converter import Converter
 
 
@@ -284,7 +285,7 @@ class EM:
     @staticmethod
     def est_snr(images):
 
-        snr = data_utils.estimate_snr(images)[0]
+        snr = common.estimate_snr(images.T)[0]
         if snr <= 0:
             snr = 10 ** -4
 

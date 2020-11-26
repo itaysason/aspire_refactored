@@ -132,7 +132,7 @@ def cryo_CTF_Relion(square_side, star_record):
 
     """
     #  wavelength in nm
-    wave_length = 1.22639 / np.sqrt(star_record.voltage * 1000 + 0.97845 * star_record.voltage**2)
+    wave_length = voltage_to_wavelength(star_record.voltage)
 
     # Divide by 10 to make pixel size in nm. BW is the bandwidth of
     #  the signal corresponding to the given pixel size
@@ -166,7 +166,7 @@ def cryo_CTF_Relion_fast(shifted_cut_s_squared, shifted_cut_s_fourth_power, shif
     :param star_record:
     :return:
     """
-    wave_length = 1.22639 / np.sqrt(star_record.voltage * 1000 + 0.97845 * star_record.voltage**2)
+    wave_length = voltage_to_wavelength(star_record.voltage)
 
     # Divide by 10 to make pixel size in nm. BW is the bandwidth of
     #  the signal corresponding to the given pixel size
@@ -316,3 +316,12 @@ def organize_star_records(star_records):
         stack_struct.pos_in_stack = np.array(stack_struct.pos_in_stack)
         stack_struct.pos_in_records = np.array(stack_struct.pos_in_records)
     return stacks_info
+
+
+def voltage_to_wavelength(voltage):
+    # aspire matlab version
+    wave_length = 1.22639 / np.sqrt(voltage * 1000 + 0.97845 * voltage ** 2)
+
+    # cov3d matlab version
+    # wave_length = 1.22643247 / np.sqrt(voltage * 1000 + 0.978466 * voltage ** 2)
+    return wave_length

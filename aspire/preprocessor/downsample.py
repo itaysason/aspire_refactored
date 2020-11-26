@@ -27,7 +27,7 @@ def downsample(stack, n, mask=None, stack_in_fourier=False):
     mask = 1 if mask is None else mask
     num_images = stack.shape[0]
     output = np.zeros((num_images, n, n), dtype='float32')
-    images_batches = np.array_split(np.arange(num_images), 500)
+    images_batches = np.array_split(np.arange(num_images), 10)
     for batch in images_batches:
         curr_batch = np.array(stack[batch])
         curr_batch = curr_batch if stack_in_fourier else fft2(curr_batch)

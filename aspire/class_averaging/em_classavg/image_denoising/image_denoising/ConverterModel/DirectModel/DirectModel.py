@@ -2,14 +2,15 @@ import numpy as np
 import pycuda.gpuarray as gpuarray
 
 import skcuda.linalg as linalg
-import aspire.em_classavg.mask_images_kernel as mask_images_kernel
-import aspire.em_classavg.config as config
+import aspire.class_averaging.em_classavg.mask_images_kernel as mask_images_kernel
+import aspire.class_averaging.em_classavg.config as config
+
 
 class DirectModel:
     def __init__(self, resolution, truncation, beta, pswf2d, even):
         # find max alpha for each N
 
-        linalg.init()  # TODO: is this the right place to do init???
+        # linalg.init()  # TODO: is this the right place to do init???
         max_ns = []
         a = np.square(float(beta * resolution) / 2)
         m = 0
@@ -145,6 +146,7 @@ class DirectModel:
 
     def get_neg_freq_inds(self):
         ValueError('no negative frequencies')
+
 
 class DirectModel_Full(DirectModel):
 

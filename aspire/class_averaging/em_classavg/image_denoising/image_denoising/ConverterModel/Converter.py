@@ -1,6 +1,6 @@
-from aspire.em_classavg.image_denoising.image_denoising.PSWF2D.PSWF2DModel import PSWF2D
+from aspire.class_averaging.em_classavg.image_denoising.image_denoising.PSWF2D.PSWF2DModel import PSWF2D
 import numpy as np
-from aspire.em_classavg.image_denoising.image_denoising.ConverterModel import DirectModel, DirectModel_Full
+from aspire.class_averaging.em_classavg.image_denoising.image_denoising.ConverterModel.DirectModel.DirectModel import DirectModel, DirectModel_Full
 
 
 # from image_denoising.image_denoising.ConverterModel.FastModel.FastModel import FastModel

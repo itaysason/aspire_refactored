@@ -49,6 +49,8 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
 
     mean_im = np.dot(spca_data.fn0, spca_data.mean)
     output = np.zeros(data.shape)
+    if use_em:
+        output_em = np.zeros(data.shape)
 
     # pre allocating stuff
     images = np.zeros((k + 1, resolution, resolution), dtype='float64')
@@ -140,7 +142,9 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
             remove_outliers = True
             em = EM(images2, output[j], n_iters, ang_jump=ang_jump, max_shift=max_shift, shift_jump=shift_jump,
                     n_scales=n_scales, is_remove_outliers=remove_outliers)
-            em_avg_est, _ = em.do_em()
+            im_avg_est, log_lik, opt_latent, outlier_ims_inds, posteriors = em.do_em()
+            output_em[j] = im_avg_est
+
         tic7 = time.time()
 
         rotate_time += tic1 - tic0
@@ -159,10 +163,15 @@ def align_main(data, angle, class_vdm, refl, spca_data, k, max_shifts, list_reco
     print(rest_time)
     if use_em:
         print(em_time)
+        output_em = output_em.swapaxes(1, 2)
+        output_em = output_em.swapaxes(0, 2)
+        output_em = np.ascontiguousarray(output_em)
     output = output.swapaxes(1, 2)
     output = output.swapaxes(0, 2)
     output = np.ascontiguousarray(output)
 
+    if use_em:
+        return shifts, corr, output, output_em, norm_variance
     return shifts, corr, output, norm_variance
 
 
