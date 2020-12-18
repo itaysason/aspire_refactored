@@ -2,6 +2,7 @@ import aspire.utils.common as common
 import scipy.special as sp
 import numpy as np
 import finufftpy
+from aspire.utils.constants import BESSEL_NPY
 
 
 def compute_spca(images, noise_v_r, adaptive_support=False):
@@ -346,6 +347,6 @@ def ift_fb(support_size, bandlimit):
 
 def get_bessel():
     try:
-        return np.load('data/bessel.npy')
+        return np.load(BESSEL_NPY)
     except:
         raise OSError('Please run only from aspire_refactored!')
