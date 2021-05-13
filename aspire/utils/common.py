@@ -3,7 +3,7 @@ from numpy.fft import fftshift, ifftshift
 from pyfftw.interfaces.numpy_fft import fft2, ifft2
 from numpy.polynomial.legendre import leggauss
 import scipy.special as sp
-import finufftpy
+# import finufftpy
 
 
 def crop(x, out_shape):
@@ -23,9 +23,23 @@ def crop(x, out_shape):
     return out
 
 
-def downsample(images, out_size, is_stack=True):
-    # TODO
-    return 0
+def cryo_downsample(x, out_shape):
+    """
+    :param x: ndarray of size (N_1,...N_k)
+    :param out_shape: iterable of integers of length k. The value in position i (n_i) is the size we want to cut from
+        the center of x in dimension i. If the value of n_i <= 0 or >= N_i then the dimension is left as is.
+    :return: out: downsampled x
+    """
+    dtype_in = x.dtype
+    in_shape = np.array(x.shape)
+    out_shape = np.array([s if 0 < s < in_shape[i] else in_shape[i] for i, s in enumerate(out_shape)])
+    fourier_dims = np.array([i for i, s in enumerate(out_shape) if 0 < s < in_shape[i]])
+    size_in = np.prod(in_shape[fourier_dims])
+    size_out = np.prod(out_shape[fourier_dims])
+
+    fx = crop(np.fft.fftshift(np.fft.fft2(x, axes=fourier_dims), axes=fourier_dims), out_shape)
+    out = np.fft.ifft2(np.fft.ifftshift(fx, axes=fourier_dims), axes=fourier_dims) * (size_out / size_in)
+    return out.astype(dtype_in)
 
 
 def estimate_snr(images):
@@ -86,6 +100,14 @@ def cfft2(x, axes=(-1, -2)):
         return y
     else:
         raise ValueError("x must be 2D or 3D")
+
+
+def cfftn(x):
+    return np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(x)))
+
+
+def icfftn(x):
+    return np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(x)))
 
 
 def icfft2(x, axes=(-1, -2)):
