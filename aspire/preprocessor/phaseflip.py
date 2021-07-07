@@ -1,11 +1,11 @@
 import os
 import numpy as np
-from aspire.utils.parse_star import read_star
+from aspire.aspire.utils.parse_star import read_star
 from pyfftw.interfaces.numpy_fft import fft2, ifft2, rfft2, irfft2
 from scipy.io import loadmat
 import mrcfile
 from box import Box
-from aspire.utils.common import create_struct
+from aspire.aspire.utils.common import create_struct
 import time
 
 

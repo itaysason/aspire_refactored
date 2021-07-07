@@ -1,5 +1,5 @@
 import numpy as np
-import aspire.utils.common as common
+import aspire.aspire.utils.common as common
 import scipy.sparse as sps
 import scipy.linalg as scl
 

@@ -1,4 +1,4 @@
-import aspire.utils.common as common
+import aspire.aspire.utils.common as common
 import scipy.special as sp
 import numpy as np
 import finufftpy

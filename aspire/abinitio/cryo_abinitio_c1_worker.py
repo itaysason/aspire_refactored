@@ -1,10 +1,10 @@
 import numpy as np
-from aspire.utils.common import cryo_pft, create_struct, fuzzy_mask
-from aspire.abinitio.cryo_clmatrix import cryo_clmatrix_cpu
-from aspire.abinitio.cryo_estimate_mean import cryo_estimate_mean
-from aspire.abinitio.cryo_syncmatrix_vote import cryo_syncmatrix_vote
-from aspire.abinitio.cryo_sync_rotations import cryo_sync_rotations
-from aspire.abinitio.cryo_estimate_shifts import cryo_estimate_shifts
+from aspire.aspire.utils.common import cryo_pft, create_struct, fuzzy_mask
+from aspire.aspire.abinitio.cryo_clmatrix import cryo_clmatrix_cpu
+from aspire.aspire.abinitio.cryo_estimate_mean import cryo_estimate_mean
+from aspire.aspire.abinitio.cryo_syncmatrix_vote import cryo_syncmatrix_vote
+from aspire.aspire.abinitio.cryo_sync_rotations import cryo_sync_rotations
+from aspire.aspire.abinitio.cryo_estimate_shifts import cryo_estimate_shifts
 import time
 
 

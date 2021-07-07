@@ -1,5 +1,5 @@
 import numpy as np
-from aspire.utils.common import fill_struct, fast_cfft2, fast_icfft2
+from aspire.aspire.utils.common import fill_struct, fast_cfft2, fast_icfft2
 from pyfftw.interfaces import numpy_fft
 import finufftpy
 

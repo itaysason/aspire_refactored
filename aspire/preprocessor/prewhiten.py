@@ -1,6 +1,6 @@
 import numpy as np
 import pyfftw
-import aspire.utils.common as common
+import aspire.aspire.utils.common as common
 
 
 def prewhiten(stack):

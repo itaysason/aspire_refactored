@@ -1,5 +1,5 @@
 import numpy as np
-import aspire.utils.common as common
+import aspire.aspire.utils.common as common
 
 
 def cryo_select_subset(images, classes, size_output, to_image=None, n_skip=None):

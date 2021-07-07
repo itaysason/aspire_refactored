@@ -1,5 +1,5 @@
 import numpy as np
-import aspire.utils.common as common
+import aspire.aspire.utils.common as common
 import pyfftw
 from aspire.class_averaging.em_classavg.em import EM
 
